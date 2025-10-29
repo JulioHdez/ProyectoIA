@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrenamiento Personalizado - Smart Shopping Cart</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .training-container {
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .training-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        .status-inactive {
+            background: #6c757d;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .product-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #007bff;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        /* Estilos para el modal de galería */
+        .carousel-item img {
+            max-height: 500px;
+            object-fit: contain;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .carousel-control-prev,
+        .carousel-control-next {
+            background-color: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .carousel-control-prev {
+            left: 20px;
+        }
+        
+        .carousel-control-next {
+            right: 20px;
+        }
+        
+        .product-image-link {
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .product-image-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        .progress-container {
+            margin-top: 1rem;
+        }
+        .training-progress {
+            height: 25px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-shopping-cart me-2"></i>Smart Cart
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i>Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('products') }}">
+                            <i class="fas fa-box me-1"></i>Productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('inventory') }}">
+                            <i class="fas fa-warehouse me-1"></i>Inventario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('camera') }}">
+                            <i class="fas fa-camera me-1"></i>Cámara
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('sales') }}">
+                            <i class="fas fa-chart-line me-1"></i>Ventas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('reports') }}">
+                            <i class="fas fa-file-alt me-1"></i>Reportes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('training') }}">
+                            <i class="fas fa-brain me-1"></i>Entrenamiento
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="training-container">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="text-center mb-4">
+                        <h1 class="display-4 mb-3">
+                            <i class="fas fa-brain text-primary me-3"></i>
+                            Entrenamiento Personalizado
+                        </h1>
+                        <p class="lead text-muted">
+                            Entrena el modelo de IA para reconocer tus productos específicos
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Estado del Entrenamiento -->
+                <div class="col-lg-6">
+                    <div class="training-card">
+                        <h3 class="mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Estado del Sistema
+                        </h3>
+                        
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator" id="trainingStatus"></span>
+                                    <span id="trainingStatusText">Verificando...</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-end">
+                                    <span class="badge bg-primary" id="productsCount">0</span>
+                                    <small class="text-muted">Productos</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="progress-container" id="progressContainer" style="display: none;">
+                            <div class="progress training-progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%" id="trainingProgress">
+                                    <span id="progressText">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5>Productos Personalizados:</h5>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="sortByName">
+                                        <i class="fas fa-sort-alpha-down me-1"></i>Nombre
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="sortByDate">
+                                        <i class="fas fa-sort-numeric-down me-1"></i>Fecha
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="sortByImages">
+                                        <i class="fas fa-images me-1"></i>Imágenes
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="customProductsList">
+                                <div class="text-center text-muted py-3">
+                                    <i class="fas fa-box-open fa-2x mb-2"></i>
+                                    <p>No hay productos personalizados</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Captura de Productos -->
+                <div class="col-lg-6">
+                    <div class="training-card">
+                        <h3 class="mb-3">
+                            <i class="fas fa-camera me-2"></i>Capturar Producto
+                        </h3>
+                        
+                        <form id="captureForm">
+                            <div class="mb-3">
+                                <label for="productName" class="form-label">Nombre del Producto</label>
+                                <input type="text" class="form-control" id="productName" 
+                                       placeholder="Ej: Galletas Oreo" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="numImages" class="form-label">Número de Imágenes</label>
+                                <select class="form-select" id="numImages">
+                                    <option value="5">5 imágenes</option>
+                                    <option value="10" selected>10 imágenes</option>
+                                    <option value="15">15 imágenes</option>
+                                    <option value="20">20 imágenes</option>
+                                </select>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary w-100" id="startCaptureBtn">
+                                <i class="fas fa-camera me-1"></i>Iniciar Captura
+                            </button>
+                        </form>
+
+                        <!-- Interfaz de Captura -->
+                        <div id="captureInterface" style="display: none;" class="mt-4">
+                            <div class="video-container mb-3">
+                                <video id="captureVideo" width="100%" height="300" autoplay muted></video>
+                                <canvas id="captureCanvas" style="display: none;"></canvas>
+                            </div>
+                            
+                            <div class="text-center mb-3">
+                                <div class="alert alert-info">
+                                    <strong>Capturas:</strong> <span id="captureCount">0</span> / <span id="totalCaptures">10</span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button class="btn btn-success me-2" id="captureBtn">
+                                    <i class="fas fa-camera me-1"></i>Capturar
+                                </button>
+                                <button class="btn btn-secondary" id="finishCaptureBtn">
+                                    <i class="fas fa-check me-1"></i>Finalizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h5>Instrucciones:</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Coloca el producto frente a la cámara</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Presiona "Capturar" para cada imagen</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Captura desde diferentes ángulos</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Presiona "Finalizar" cuando termines</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Entrenamiento -->
+                    <div class="training-card">
+                        <h3 class="mb-3">
+                            <i class="fas fa-cogs me-2"></i>Entrenar Modelo
+                        </h3>
+                        
+                        <form id="trainingForm">
+                            <div class="mb-3">
+                                <label for="epochs" class="form-label">Épocas de Entrenamiento</label>
+                                <select class="form-select" id="epochs">
+                                    <option value="25">25 épocas (rápido)</option>
+                                    <option value="50" selected>50 épocas (recomendado)</option>
+                                    <option value="100">100 épocas (preciso)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="batchSize" class="form-label">Tamaño del Batch</label>
+                                <select class="form-select" id="batchSize">
+                                    <option value="8">8 (memoria baja)</option>
+                                    <option value="16" selected>16 (recomendado)</option>
+                                    <option value="32">32 (memoria alta)</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success w-100" id="trainBtn" disabled>
+                                <i class="fas fa-play me-1"></i>Iniciar Entrenamiento
+                            </button>
+                        </form>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                El entrenamiento puede tomar varios minutos dependiendo del número de productos.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="alertToast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                <strong class="me-auto">Smart Cart</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="alertMessage">
+                Mensaje de alerta
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para galería de imágenes -->
+    <div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-labelledby="imageGalleryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageGalleryModalLabel">Galería de Imágenes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="imageCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner" id="carouselInner">
+                            <!-- Las imágenes se cargarán aquí dinámicamente -->
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#imageCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Anterior</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#imageCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Siguiente</span>
+                        </button>
+                    </div>
+                    <div class="text-center mt-3">
+                        <span id="imageCounter" class="badge bg-primary">1 / 1</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let isTraining = false;
+        let isCapturing = false;
+        let captureStream = null;
+        let capturedImages = [];
+        let currentProductName = '';
+        let totalImages = 10;
+        let currentSort = 'name'; // 'name', 'date', 'images'
+
+        function showAlert(message, type = 'info') {
+            const alertToast = document.getElementById('alertToast');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            alertMessage.textContent = message;
+            alertToast.className = `toast ${type === 'error' ? 'bg-danger text-white' : ''}`;
+            
+            const toast = new bootstrap.Toast(alertToast);
+            toast.show();
+        }
+
+        function updateTrainingStatus() {
+            fetch('/get_training_status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const status = data.data;
+                    
+                    // Actualizar estado del entrenamiento
+                    const statusIndicator = document.getElementById('trainingStatus');
+                    const statusText = document.getElementById('trainingStatusText');
+                    const productsCount = document.getElementById('productsCount');
+                    const trainBtn = document.getElementById('trainBtn');
+                    
+                    if (status.is_training) {
+                        statusIndicator.className = 'status-indicator status-active';
+                        statusText.textContent = 'Entrenando...';
+                        trainBtn.disabled = true;
+                        trainBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Entrenando...';
+                    } else {
+                        statusIndicator.className = 'status-indicator status-inactive';
+                        statusText.textContent = 'Listo para entrenar';
+                        trainBtn.disabled = status.custom_products_count === 0;
+                        trainBtn.innerHTML = '<i class="fas fa-play me-1"></i>Iniciar Entrenamiento';
+                    }
+                    
+                    productsCount.textContent = status.custom_products_count;
+                    
+                    // Actualizar lista de productos con información detallada
+                    if (status.custom_products_count > 0) {
+                        fetch('/get_custom_products')
+                            .then(response => response.json())
+                            .then(productsData => {
+                                if (productsData.status === 'success') {
+                                    renderProductsList(productsData.products);
+                                } else {
+                                    updateProductsList(status.products);
+                                }
+                            })
+                            .catch(() => {
+                                updateProductsList(status.products);
+                            });
+                    } else {
+                        renderProductsList([]);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error obteniendo estado:', error);
+            });
+        }
+
+        function updateProductsList(products) {
+            // Convertir lista simple a formato con información detallada
+            const productsWithDetails = products.map(name => ({
+                name: name,
+                image_count: 0, // Se actualizará con información real si está disponible
+                created_at: new Date().toISOString()
+            }));
+            
+            renderProductsList(productsWithDetails);
+        }
+
+        function deleteProduct(productName) {
+            if (confirm(`¿Estás seguro de que quieres eliminar el producto "${productName}"?`)) {
+                fetch('/delete_custom_product', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ product_name: productName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showAlert(data.message, 'success');
+                        updateTrainingStatus();
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error al eliminar producto: ' + error.message, 'error');
+                });
+            }
+        }
+
+        // Función para iniciar captura web
+        async function startWebCapture() {
+            const productName = document.getElementById('productName').value;
+            const numImages = parseInt(document.getElementById('numImages').value);
+            
+            if (!productName.trim()) {
+                showAlert('Por favor ingresa un nombre para el producto', 'error');
+                return;
+            }
+            
+            try {
+                // Solicitar acceso a la cámara
+                captureStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                
+                const video = document.getElementById('captureVideo');
+                video.srcObject = captureStream;
+                
+                // Configurar variables
+                currentProductName = productName;
+                totalImages = numImages;
+                capturedImages = [];
+                
+                // Mostrar interfaz de captura
+                document.getElementById('captureInterface').style.display = 'block';
+                document.getElementById('captureForm').style.display = 'none';
+                document.getElementById('totalCaptures').textContent = totalImages;
+                document.getElementById('captureCount').textContent = '0';
+                
+                showAlert('Cámara iniciada. Coloca el producto frente a la cámara', 'success');
+                
+            } catch (error) {
+                showAlert('Error al acceder a la cámara: ' + error.message, 'error');
+            }
+        }
+        
+        // Función para capturar imagen
+        function captureImage() {
+            if (capturedImages.length >= totalImages) {
+                showAlert('Ya has capturado el número máximo de imágenes', 'warning');
+                return;
+            }
+            
+            const video = document.getElementById('captureVideo');
+            const canvas = document.getElementById('captureCanvas');
+            const context = canvas.getContext('2d');
+            
+            // Configurar canvas
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Dibujar frame actual
+            context.drawImage(video, 0, 0);
+            
+            // Convertir a base64
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            capturedImages.push(imageData);
+            
+            // Actualizar contador
+            document.getElementById('captureCount').textContent = capturedImages.length;
+            
+            showAlert(`Imagen ${capturedImages.length} capturada`, 'success');
+            
+            // Si se alcanzó el máximo, finalizar automáticamente
+            if (capturedImages.length >= totalImages) {
+                finishCapture();
+            }
+        }
+        
+        // Función para finalizar captura
+        async function finishCapture() {
+            if (capturedImages.length === 0) {
+                showAlert('No se capturaron imágenes', 'error');
+                return;
+            }
+            
+            try {
+                // Detener cámara
+                if (captureStream) {
+                    captureStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Enviar imágenes al servidor
+                const response = await fetch('/capture_images_from_web', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        product_name: currentProductName,
+                        images: capturedImages,
+                        num_images: capturedImages.length
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showAlert(`Producto "${currentProductName}" agregado con ${capturedImages.length} imágenes`, 'success');
+                    document.getElementById('productName').value = '';
+                    updateTrainingStatus();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+                
+            } catch (error) {
+                showAlert('Error al procesar imágenes: ' + error.message, 'error');
+            } finally {
+                // Limpiar interfaz
+                document.getElementById('captureInterface').style.display = 'none';
+                document.getElementById('captureForm').style.display = 'block';
+                capturedImages = [];
+                currentProductName = '';
+            }
+        }
+        
+        // Funciones de ordenamiento
+        function sortProducts(sortBy) {
+            currentSort = sortBy;
+            updateTrainingStatus();
+            
+            // Actualizar botones activos
+            document.querySelectorAll('.btn-group .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`sortBy${sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}`).classList.add('active');
+        }
+        
+        function renderProductsList(products) {
+            const container = document.getElementById('customProductsList');
+            
+            if (!products || products.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-box-open fa-2x mb-2"></i>
+                        <p>No hay productos personalizados</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Ordenar productos según el criterio actual
+            let sortedProducts = [...products];
+            switch(currentSort) {
+                case 'name':
+                    sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'date':
+                    sortedProducts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    break;
+                case 'images':
+                    sortedProducts.sort((a, b) => b.image_count - a.image_count);
+                    break;
+            }
+            
+            container.innerHTML = sortedProducts.map(product => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">${product.name}</h6>
+                        <small class="text-muted">
+                            <i class="fas fa-images me-1"></i>
+                            <span class="product-image-link" onclick="showImageGallery('${product.name}', ${product.image_count})">
+                                ${product.image_count} imágenes
+                            </span>
+                            <span class="mx-2">•</span>
+                            <i class="fas fa-calendar me-1"></i>${new Date(product.created_at).toLocaleDateString()}
+                        </small>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteProduct('${product.name}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        // Event listeners
+        document.getElementById('startCaptureBtn').addEventListener('click', startWebCapture);
+        document.getElementById('captureBtn').addEventListener('click', captureImage);
+        document.getElementById('finishCaptureBtn').addEventListener('click', finishCapture);
+        
+        // Event listeners para ordenamiento
+        document.getElementById('sortByName').addEventListener('click', () => sortProducts('name'));
+        document.getElementById('sortByDate').addEventListener('click', () => sortProducts('date'));
+        document.getElementById('sortByImages').addEventListener('click', () => sortProducts('images'));
+        
+        // Función para mostrar la galería de imágenes
+        function showImageGallery(productName, imageCount) {
+            if (imageCount === 0) {
+                showAlert('No hay imágenes disponibles para este producto', 'warning');
+                return;
+            }
+            
+            // Actualizar el título del modal
+            document.getElementById('imageGalleryModalLabel').textContent = `Galería de Imágenes - ${productName}`;
+            
+            // Cargar las imágenes del producto
+            loadProductImages(productName);
+        }
+        
+        // Función para cargar las imágenes del producto
+        async function loadProductImages(productName) {
+            try {
+                const response = await fetch(`/get_product_images/${encodeURIComponent(productName)}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayImagesInModal(data.images, productName);
+                } else {
+                    showAlert('Error al cargar las imágenes: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error al cargar las imágenes: ' + error.message, 'error');
+            }
+        }
+        
+        // Función para mostrar las imágenes en el modal
+        function displayImagesInModal(images, productName) {
+            const carouselInner = document.getElementById('carouselInner');
+            const imageCounter = document.getElementById('imageCounter');
+            
+            // Limpiar el carousel
+            carouselInner.innerHTML = '';
+            
+            if (images.length === 0) {
+                carouselInner.innerHTML = `
+                    <div class="carousel-item active">
+                        <div class="text-center py-5">
+                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay imágenes disponibles</p>
+                        </div>
+                    </div>
+                `;
+                imageCounter.textContent = '0 / 0';
+                return;
+            }
+            
+            // Crear los elementos del carousel
+            images.forEach((imagePath, index) => {
+                const carouselItem = document.createElement('div');
+                carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+                carouselItem.innerHTML = `
+                    <img src="/static/custom_products/${productName}/${imagePath}" 
+                         class="d-block w-100" 
+                         alt="Imagen ${index + 1} de ${productName}"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm9yIGFsIGNhcmdhciBpbWFnZW48L3RleHQ+PC9zdmc+'">
+                `;
+                carouselInner.appendChild(carouselItem);
+            });
+            
+            // Actualizar contador
+            imageCounter.textContent = `1 / ${images.length}`;
+            
+            // Configurar eventos del carousel para actualizar el contador
+            const carousel = document.getElementById('imageCarousel');
+            carousel.addEventListener('slide.bs.carousel', function (event) {
+                const activeIndex = event.to;
+                imageCounter.textContent = `${activeIndex + 1} / ${images.length}`;
+            });
+            
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('imageGalleryModal'));
+            modal.show();
+        }
+
+        // Formulario de entrenamiento
+        document.getElementById('trainingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (isTraining) {
+                showAlert('Ya hay un entrenamiento en progreso', 'error');
+                return;
+            }
+            
+            const epochs = parseInt(document.getElementById('epochs').value);
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            
+            isTraining = true;
+            const trainBtn = document.getElementById('trainBtn');
+            trainBtn.disabled = true;
+            trainBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Entrenando...';
+            
+            // Mostrar barra de progreso
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            fetch('/start_training', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    epochs: epochs,
+                    batch_size: batchSize
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showAlert(data.message, 'success');
+                    
+                    // Simular progreso (en una implementación real, esto vendría del servidor)
+                    simulateTrainingProgress();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Error al iniciar entrenamiento: ' + error.message, 'error');
+            });
+        });
+
+        function simulateTrainingProgress() {
+            let progress = 0;
+            const progressBar = document.getElementById('trainingProgress');
+            const progressText = document.getElementById('progressText');
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress > 100) progress = 100;
+                
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        isTraining = false;
+                        updateTrainingStatus();
+                        document.getElementById('progressContainer').style.display = 'none';
+                        showAlert('Entrenamiento completado exitosamente', 'success');
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // Actualizar estado cada 5 segundos
+        setInterval(updateTrainingStatus, 5000);
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTrainingStatus();
+        });
+    </script>
+</body>
+</html>

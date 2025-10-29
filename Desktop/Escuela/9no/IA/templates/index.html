@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Shopping Cart - Carrito Inteligente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 0;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .feature-card {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-shopping-cart me-2"></i>Smart Cart
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i>Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('products') }}">
+                            <i class="fas fa-box me-1"></i>Productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('inventory') }}">
+                            <i class="fas fa-warehouse me-1"></i>Inventario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('camera') }}">
+                            <i class="fas fa-camera me-1"></i>Cámara IA
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('training') }}">
+                            <i class="fas fa-brain me-1"></i>Entrenamiento
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('sales') }}">
+                            <i class="fas fa-chart-line me-1"></i>Ventas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('reports') }}">
+                            <i class="fas fa-file-alt me-1"></i>Reportes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 mb-4">
+                <i class="fas fa-robot me-3"></i>Carrito de Compras Inteligente
+            </h1>
+            <p class="lead mb-4">
+                Sistema avanzado de detección de productos con Inteligencia Artificial
+            </p>
+            <a href="{{ url_for('camera') }}" class="btn btn-light btn-lg">
+                <i class="fas fa-play me-2"></i>Iniciar Detección
+            </a>
+        </div>
+    </section>
+
+    <!-- Estadísticas -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Estadísticas del Día</h2>
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon text-primary">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <h3>{{ stats.total_products }}</h3>
+                        <p class="text-muted">Productos Totales</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon text-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3>{{ stats.low_stock_items }}</h3>
+                        <p class="text-muted">Stock Bajo</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon text-success">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <h3>{{ stats.today_sales }}</h3>
+                        <p class="text-muted">Ventas Hoy</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card text-center">
+                        <div class="stat-icon text-info">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <h3>${{ "%.2f"|format(stats.today_revenue) }}</h3>
+                        <p class="text-muted">Ingresos Hoy</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Características -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">Características Principales</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fas fa-eye fa-3x text-primary mb-3"></i>
+                        <h4>Detección Automática</h4>
+                        <p>Reconoce productos automáticamente usando visión por computadora y IA</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fas fa-database fa-3x text-success mb-3"></i>
+                        <h4>Gestión de Inventario</h4>
+                        <p>Control completo del inventario con alertas de stock bajo</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                        <h4>Reportes Inteligentes</h4>
+                        <p>Análisis detallado de ventas y reportes semanales automáticos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Acciones Rápidas -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Acciones Rápidas</h2>
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-plus-circle fa-3x text-success mb-3"></i>
+                            <h5 class="card-title">Agregar Producto</h5>
+                            <p class="card-text">Registra nuevos productos en el sistema</p>
+                            <a href="{{ url_for('add_product') }}" class="btn btn-success">
+                                <i class="fas fa-plus me-2"></i>Agregar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-camera fa-3x text-primary mb-3"></i>
+                            <h5 class="card-title">Detección por Cámara</h5>
+                            <p class="card-text">Inicia la detección automática de productos</p>
+                            <a href="{{ url_for('camera') }}" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Iniciar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container text-center">
+            <p>&copy; 2024 Smart Shopping Cart. Sistema de Carrito Inteligente con IA.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

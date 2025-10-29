@@ -1,0 +1,14 @@
+flask==2.3.3
+flask-sqlalchemy==3.0.5
+flask-migrate==4.0.5
+opencv-python==4.8.1.78
+ultralytics==8.0.196
+pillow==10.0.1
+numpy==1.24.3
+pandas==2.0.3
+matplotlib==3.7.2
+seaborn==0.12.2
+python-dateutil==2.8.2
+werkzeug==2.3.7
+jinja2==3.1.2
+

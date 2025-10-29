@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes - Smart Shopping Cart</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-shopping-cart me-2"></i>Smart Cart
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i>Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('products') }}">
+                            <i class="fas fa-box me-1"></i>Productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('inventory') }}">
+                            <i class="fas fa-warehouse me-1"></i>Inventario
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('camera') }}">
+                            <i class="fas fa-camera me-1"></i>Cámara IA
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('training') }}">
+                            <i class="fas fa-brain me-1"></i>Entrenamiento
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('sales') }}">
+                            <i class="fas fa-chart-line me-1"></i>Ventas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('reports') }}">
+                            <i class="fas fa-file-alt me-1"></i>Reportes
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-file-alt me-3"></i>Reportes y Análisis</h1>
+            <button class="btn btn-success" onclick="generateWeeklyReport()">
+                <i class="fas fa-plus me-2"></i>Generar Reporte Semanal
+            </button>
+        </div>
+
+        <!-- Mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Reportes Semanales -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-week me-2"></i>Reportes Semanales
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if weekly_reports %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Semana</th>
+                                    <th>Ventas Totales</th>
+                                    <th>Productos Vendidos</th>
+                                    <th>Transacciones</th>
+                                    <th>Fecha Creación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in weekly_reports %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ report.week_start.strftime('%d/%m') }} - {{ report.week_end.strftime('%d/%m/%Y') }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="h5 text-success">${{ "%.2f"|format(report.total_sales) }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ report.total_products_sold }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ report.total_transactions }}</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ report.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('export_report', report_id=report.id) }}" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-download me-1"></i>Exportar CSV
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-2x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay reportes semanales generados</h5>
+                        <p class="text-muted">Genera tu primer reporte semanal para ver el análisis</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reportes Diarios -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-day me-2"></i>Reportes Diarios (Última Semana)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if daily_reports %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Ventas Totales</th>
+                                    <th>Productos Vendidos</th>
+                                    <th>Transacciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in daily_reports %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ report.report_date.strftime('%d/%m/%Y') }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ report.report_date.strftime('%A') }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="h6 text-success">${{ "%.2f"|format(report.total_sales) }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ report.total_products_sold }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ report.total_transactions }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar fa-2x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay reportes diarios disponibles</h5>
+                        <p class="text-muted">Los reportes diarios se generan automáticamente</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function generateWeeklyReport() {
+            if (confirm('¿Generar reporte semanal? Esto creará un análisis de la semana pasada.')) {
+                fetch('/generate_weekly_report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Error al generar el reporte');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al generar el reporte');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+

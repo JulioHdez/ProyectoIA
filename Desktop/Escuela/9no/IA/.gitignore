@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.cursor/
+.cache/
+
+# Environment / secrets
+.env
+.env.local
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Test/coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# App data
+instance/*.db
+uploads/
+
+# YOLO/Models/Weights and large artifacts
+*.pt
+training_data/labels.cache
+custom_training/product_detection/weights/
+
+# Logs
+*.log
