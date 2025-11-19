@@ -42,8 +42,13 @@ detection_results = []
 # Las tablas se crean automáticamente en la función main
 
 @app.route('/')
-def index():
-    """Página principal"""
+def welcome():
+    """Pantalla de inicio - Selección de modo"""
+    return render_template('welcome.html')
+
+@app.route('/admin')
+def admin_dashboard():
+    """Panel de administración"""
     # Estadísticas rápidas
     total_products = Product.query.count()
     low_stock_items = Inventory.query.filter(Inventory.quantity <= Inventory.min_stock).count()
@@ -61,6 +66,116 @@ def index():
     
     return render_template('index.html', stats=stats)
 
+@app.route('/checkout')
+def checkout():
+    """Página de cobro con cámara y carrito"""
+    return render_template('checkout.html')
+
+@app.route('/process_checkout', methods=['POST'])
+def process_checkout():
+    """Procesar venta del carrito y actualizar inventario"""
+    try:
+        data = request.get_json()
+        items = data.get('items', [])
+        total = data.get('total', 0)
+        
+        if not items or len(items) == 0:
+            return jsonify({'status': 'error', 'message': 'El carrito está vacío'})
+        
+        warnings = []
+        processed_items = []
+        
+        # Procesar cada item
+        for item in items:
+            # Buscar o crear producto
+            product = Product.query.filter_by(name=item['name']).first()
+            
+            if not product:
+                # Crear producto automáticamente
+                product = Product(
+                    name=item['name'],
+                    description=f'Producto vendido desde carrito (confianza: {item.get("confidence", 0):.2f})',
+                    price=item['price'],
+                    category='Venta Rápida'
+                )
+                db.session.add(product)
+                db.session.flush()
+                
+                # Crear inventario inicial (se asume que se vende desde stock existente)
+                # Si no hay inventario previo, se crea con cantidad 0 y se permite la venta
+                inventory = Inventory(
+                    product_id=product.id,
+                    quantity=0,
+                    min_stock=1
+                )
+                db.session.add(inventory)
+                db.session.flush()
+                warnings.append(f'{item["name"]}: Producto nuevo creado (sin stock previo)')
+            
+            # Obtener o crear inventario
+            inventory = Inventory.query.filter_by(product_id=product.id).first()
+            if not inventory:
+                # Si por alguna razón no existe inventario, crearlo
+                inventory = Inventory(
+                    product_id=product.id,
+                    quantity=0,
+                    min_stock=1
+                )
+                db.session.add(inventory)
+                db.session.flush()
+            
+            # Verificar stock disponible
+            current_stock = inventory.quantity
+            requested_quantity = item['quantity']
+            
+            if current_stock < requested_quantity:
+                warnings.append(
+                    f'{item["name"]}: Stock insuficiente. '
+                    f'Disponible: {current_stock}, Solicitado: {requested_quantity}. '
+                    f'Se procesará la venta y el inventario quedará en {max(0, current_stock - requested_quantity)}'
+                )
+            
+            # Registrar venta
+            sale = Sale(
+                product_id=product.id,
+                quantity=requested_quantity,
+                unit_price=item['price'],
+                total_price=item['total'],
+                detection_method='checkout'
+            )
+            db.session.add(sale)
+            
+            # Actualizar inventario: restar la cantidad vendida
+            new_quantity = max(0, current_stock - requested_quantity)
+            inventory.quantity = new_quantity
+            inventory.last_updated = datetime.utcnow()
+            
+            processed_items.append({
+                'name': item['name'],
+                'quantity_sold': requested_quantity,
+                'stock_before': current_stock,
+                'stock_after': new_quantity
+            })
+        
+        db.session.commit()
+        
+        response = {
+            'status': 'success',
+            'message': f'Venta procesada exitosamente. Total: ${total:.2f}',
+            'total': total,
+            'items_count': len(items),
+            'processed_items': processed_items
+        }
+        
+        if warnings:
+            response['warnings'] = warnings
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/products')
 def products():
     """Página de gestión de productos"""
@@ -69,24 +184,92 @@ def products():
 
 @app.route('/add_product', methods=['GET', 'POST'])
 def add_product():
-    """Agregar nuevo producto"""
+    """Agregar nuevo producto con validaciones"""
     if request.method == 'POST':
         try:
-            name = request.form['name']
-            description = request.form.get('description', '')
-            price = float(request.form['price'])
-            category = request.form.get('category', '')
-            barcode = request.form.get('barcode', '')
-            quantity = int(request.form.get('quantity', 0))
-            min_stock = int(request.form.get('min_stock', 5))
+            # Validar y obtener nombre
+            name = request.form.get('name', '').strip()
+            if not name or len(name) < 2:
+                flash('El nombre del producto debe tener al menos 2 caracteres', 'error')
+                return render_template('add_product.html')
+            if len(name) > 100:
+                flash('El nombre del producto no puede exceder 100 caracteres', 'error')
+                return render_template('add_product.html')
+            
+            # Validar y obtener precio
+            try:
+                price_str = request.form.get('price', '0').replace(',', '.')
+                price = float(price_str)
+                if price < 0:
+                    flash('El precio no puede ser negativo', 'error')
+                    return render_template('add_product.html')
+                if price > 999999.99:
+                    flash('El precio no puede exceder $999,999.99', 'error')
+                    return render_template('add_product.html')
+            except (ValueError, TypeError):
+                flash('El precio debe ser un número válido', 'error')
+                return render_template('add_product.html')
+            
+            # Validar descripción
+            description = request.form.get('description', '').strip()
+            if len(description) > 500:
+                flash('La descripción no puede exceder 500 caracteres', 'error')
+                return render_template('add_product.html')
+            
+            # Validar categoría
+            category = request.form.get('category', '').strip()
+            if category and len(category) > 50:
+                flash('La categoría no puede exceder 50 caracteres', 'error')
+                return render_template('add_product.html')
+            
+            # Validar código de barras
+            barcode = request.form.get('barcode', '').strip()
+            if barcode:
+                if len(barcode) > 50:
+                    flash('El código de barras no puede exceder 50 caracteres', 'error')
+                    return render_template('add_product.html')
+                if not barcode.replace(' ', '').isalnum():
+                    flash('El código de barras solo puede contener números y letras', 'error')
+                    return render_template('add_product.html')
+                # Verificar si el código de barras ya existe
+                existing = Product.query.filter_by(barcode=barcode).first()
+                if existing:
+                    flash(f'El código de barras {barcode} ya está en uso', 'error')
+                    return render_template('add_product.html')
+            
+            # Validar cantidad
+            try:
+                quantity = int(request.form.get('quantity', 0))
+                if quantity < 0:
+                    flash('La cantidad no puede ser negativa', 'error')
+                    return render_template('add_product.html')
+                if quantity > 999999:
+                    flash('La cantidad no puede exceder 999,999', 'error')
+                    return render_template('add_product.html')
+            except (ValueError, TypeError):
+                flash('La cantidad debe ser un número entero válido', 'error')
+                return render_template('add_product.html')
+            
+            # Validar stock mínimo
+            try:
+                min_stock = int(request.form.get('min_stock', 5))
+                if min_stock < 0:
+                    flash('El stock mínimo no puede ser negativo', 'error')
+                    return render_template('add_product.html')
+                if min_stock > 999999:
+                    flash('El stock mínimo no puede exceder 999,999', 'error')
+                    return render_template('add_product.html')
+            except (ValueError, TypeError):
+                flash('El stock mínimo debe ser un número entero válido', 'error')
+                return render_template('add_product.html')
             
             # Crear producto
             product = Product(
                 name=name,
                 description=description,
                 price=price,
-                category=category,
-                barcode=barcode
+                category=category if category else None,
+                barcode=barcode if barcode else None
             )
             
             db.session.add(product)
@@ -119,9 +302,26 @@ def inventory():
 
 @app.route('/update_inventory/<int:product_id>', methods=['POST'])
 def update_inventory(product_id):
-    """Actualizar cantidad en inventario"""
+    """Actualizar cantidad en inventario con validaciones"""
     try:
-        quantity = int(request.form['quantity'])
+        # Validar cantidad
+        try:
+            quantity_str = request.form.get('quantity', '0').strip()
+            quantity = int(quantity_str)
+            
+            if quantity < 0:
+                flash('La cantidad no puede ser negativa', 'error')
+                return redirect(url_for('inventory'))
+            
+            if quantity > 999999:
+                flash('La cantidad no puede exceder 999,999', 'error')
+                return redirect(url_for('inventory'))
+                
+        except (ValueError, TypeError):
+            flash('La cantidad debe ser un número entero válido', 'error')
+            return redirect(url_for('inventory'))
+        
+        # Buscar inventario
         inventory = Inventory.query.filter_by(product_id=product_id).first()
         
         if inventory:
@@ -173,19 +373,47 @@ def stop_detection():
     
     return jsonify({'status': 'success', 'message': 'Detección detenida'})
 
+@app.route('/set_optimization_level', methods=['POST'])
+def set_optimization_level():
+    """Configurar nivel de optimización de la IA"""
+    try:
+        data = request.get_json()
+        level = data.get('level', 'balanced')
+        
+        if level not in ['fast', 'balanced', 'accurate']:
+            return jsonify({'status': 'error', 'message': 'Nivel inválido'})
+        
+        detector.set_optimization_level(level)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Nivel de optimización configurado a: {level}',
+            'level': level,
+            'config': {
+                'resolution': detector.process_resolution,
+                'frame_skip': detector.frame_skip,
+                'threshold': detector.detection_threshold,
+                'device': detector.device
+            }
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/get_detection_results')
 def get_detection_results():
-    """Obtener resultados de detección en tiempo real"""
+    """Obtener resultados de detección en tiempo real (optimizado)"""
     global detection_results
     
     if camera_streaming:
         frame = camera_handler.get_frame()
         if frame is not None:
-            detections = detector.detect_objects(frame)
+            # Usar cache para frames intermedios (frame skipping)
+            detections = detector.detect_objects(frame, use_cache=True)
             annotated_frame = detector.draw_detections(frame, detections)
             
-            # Convertir frame a base64 para enviar al frontend
-            _, buffer = cv2.imencode('.jpg', annotated_frame)
+            # Optimizar compresión de imagen para menor tamaño
+            encode_params = [cv2.IMWRITE_JPEG_QUALITY, 75]  # Calidad reducida para menor tamaño
+            _, buffer = cv2.imencode('.jpg', annotated_frame, encode_params)
             frame_base64 = base64.b64encode(buffer).decode('utf-8')
             
             return jsonify({
@@ -239,10 +467,20 @@ def add_detected_product():
         
         db.session.add(sale)
         
-        # Actualizar inventario
+        # Actualizar inventario: restar la cantidad vendida
         inventory = Inventory.query.filter_by(product_id=product.id).first()
-        if inventory and inventory.quantity > 0:
-            inventory.quantity -= 1
+        if inventory:
+            # Restar 1 del inventario (cantidad vendida)
+            inventory.quantity = max(0, inventory.quantity - 1)
+            inventory.last_updated = datetime.utcnow()
+        else:
+            # Si no existe inventario, crearlo con cantidad 0 (ya se vendió)
+            inventory = Inventory(
+                product_id=product.id,
+                quantity=0,
+                min_stock=1
+            )
+            db.session.add(inventory)
         
         db.session.commit()
         
@@ -499,16 +737,19 @@ def export_report(report_id):
     )
 
 def detection_worker():
-    """Worker thread para detección continua"""
+    """Worker thread para detección continua (optimizado)"""
     global camera_streaming, detection_results
     
     while camera_streaming:
         try:
             frame = camera_handler.get_frame()
             if frame is not None:
-                detections = detector.detect_objects(frame)
+                # Usar cache para mejor rendimiento
+                detections = detector.detect_objects(frame, use_cache=True)
                 detection_results = detections
-            time.sleep(0.1)  # Controlar frecuencia de detección
+            # Ajustar sleep según frame_skip para mejor rendimiento
+            sleep_time = 0.1 / detector.frame_skip if detector.frame_skip > 1 else 0.1
+            time.sleep(sleep_time)
         except Exception as e:
             print(f"Error en worker de detección: {e}")
             break

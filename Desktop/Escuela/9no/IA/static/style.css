@@ -708,3 +708,86 @@ a:hover {
 .table-warning:hover {
     background-color: rgba(251, 191, 36, 0.15) !important;
 }
+
+/* Validaciones de formularios */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--danger) !important;
+    background-color: rgba(248, 113, 113, 0.1);
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.25);
+}
+
+.form-control.is-valid,
+.form-select.is-valid {
+    border-color: var(--success) !important;
+    background-color: rgba(74, 222, 128, 0.1);
+}
+
+.form-control.is-valid:focus,
+.form-select.is-valid:focus {
+    border-color: var(--success) !important;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+}
+
+.invalid-feedback {
+    display: block;
+    color: var(--danger);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+
+.valid-feedback {
+    display: block;
+    color: var(--success);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.form-text {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.form-validation-alert {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Input group con validación */
+.input-group .form-control.is-invalid {
+    border-right-color: var(--danger);
+}
+
+.input-group .form-control.is-valid {
+    border-right-color: var(--success);
+}
+
+/* Placeholder personalizado */
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.form-control:focus::placeholder {
+    opacity: 0.4;
+}

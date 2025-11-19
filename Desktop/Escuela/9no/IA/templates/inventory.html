@@ -12,14 +12,14 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="{{ url_for('welcome') }}">
                 <i class="fas fa-shopping-cart me-2"></i>Smart Cart
             </a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">
-                            <i class="fas fa-home me-1"></i>Inicio
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="fas fa-home me-1"></i>Admin
                         </a>
                     </li>
                     <li class="nav-item">
@@ -174,8 +174,11 @@
                             <input type="text" class="form-control" id="productName" readonly>
                         </div>
                         <div class="mb-3">
-                            <label for="quantity" class="form-label">Nueva Cantidad</label>
-                            <input type="number" class="form-control" id="quantity" name="quantity" min="0" required>
+                            <label for="quantity" class="form-label">Nueva Cantidad *</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" 
+                                   data-validation-type="number" min="0" max="999999" 
+                                   step="1" required>
+                            <div class="form-text">Solo números enteros, mínimo 0</div>
                         </div>
                     </form>
                 </div>
@@ -190,6 +193,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='validation.js') }}"></script>
     <script>
         function showUpdateModal(productId, productName, currentQuantity) {
             document.getElementById('productId').value = productId;
@@ -202,6 +206,21 @@
 
         function updateInventory() {
             const form = document.getElementById('updateInventoryForm');
+            const quantityInput = document.getElementById('quantity');
+            
+            // Validar antes de enviar
+            if (!validateFieldValue(quantityInput)) {
+                quantityInput.focus();
+                return;
+            }
+            
+            const quantity = parseInt(quantityInput.value);
+            if (isNaN(quantity) || quantity < 0) {
+                showFieldError(quantityInput, 'La cantidad debe ser un número válido mayor o igual a 0');
+                quantityInput.focus();
+                return;
+            }
+            
             const formData = new FormData(form);
             
             fetch('/update_inventory/' + document.getElementById('productId').value, {

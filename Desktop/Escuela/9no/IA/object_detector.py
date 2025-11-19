@@ -19,6 +19,18 @@ class ObjectDetector:
         self.base_model_path = model_path
         self.detection_threshold = 0.5
         
+        # Configuración de optimización
+        self.process_resolution = 640  # Resolución para procesamiento (más rápido)
+        self.display_resolution = None  # Resolución para visualización (original)
+        self.frame_skip = 2  # Procesar cada N frames (1 = todos, 2 = cada 2, etc.)
+        self.frame_count = 0
+        self.last_detections = []  # Cache de última detección
+        
+        # Detectar dispositivo (GPU/CPU)
+        import torch
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f"Usando dispositivo: {self.device}")
+        
         # Inicializar entrenador personalizado
         self.custom_trainer = CustomProductTrainer(model_path)
         
@@ -31,6 +43,9 @@ class ObjectDetector:
             self.model = YOLO(model_path)
             self.class_names = self.model.names
             print("Usando modelo base")
+        
+        # Configurar modelo para mejor rendimiento
+        self._optimize_model()
         
         # Mapeo de clases COCO a productos comunes
         self.product_mapping = {
@@ -83,19 +98,111 @@ class ObjectDetector:
             print("No se encontró modelo personalizado")
             return False
     
-    def detect_objects(self, image):
+    def _optimize_model(self):
+        """Optimiza el modelo para mejor rendimiento"""
+        try:
+            # Configurar para inferencia más rápida
+            if hasattr(self.model, 'overrides'):
+                self.model.overrides['verbose'] = False
+        except:
+            pass
+    
+    def set_optimization_level(self, level='balanced'):
         """
-        Detecta objetos en una imagen
+        Configura el nivel de optimización
+        
+        Args:
+            level (str): 'fast', 'balanced', 'accurate'
+                - 'fast': Máxima velocidad, menor precisión
+                - 'balanced': Balance entre velocidad y precisión (default)
+                - 'accurate': Máxima precisión, menor velocidad
+        """
+        if level == 'fast':
+            self.process_resolution = 416
+            self.frame_skip = 3
+            self.detection_threshold = 0.6
+        elif level == 'balanced':
+            self.process_resolution = 640
+            self.frame_skip = 2
+            self.detection_threshold = 0.5
+        elif level == 'accurate':
+            self.process_resolution = 832
+            self.frame_skip = 1
+            self.detection_threshold = 0.4
+        
+        print(f"Optimización configurada: {level}")
+        print(f"  - Resolución: {self.process_resolution}px")
+        print(f"  - Frame skip: {self.frame_skip}")
+        print(f"  - Threshold: {self.detection_threshold}")
+    
+    def _resize_for_detection(self, image):
+        """
+        Redimensiona la imagen para detección más rápida
+        
+        Args:
+            image: Imagen original (numpy array)
+            
+        Returns:
+            tuple: (imagen_redimensionada, factor_escala)
+        """
+        h, w = image.shape[:2]
+        
+        # Calcular nuevo tamaño manteniendo aspect ratio
+        if w > h:
+            new_w = self.process_resolution
+            new_h = int(h * (new_w / w))
+        else:
+            new_h = self.process_resolution
+            new_w = int(w * (new_h / h))
+        
+        # Redimensionar
+        resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        
+        # Calcular factor de escala para ajustar coordenadas
+        scale_x = w / new_w
+        scale_y = h / new_h
+        
+        return resized, (scale_x, scale_y)
+    
+    def detect_objects(self, image, use_cache=False):
+        """
+        Detecta objetos en una imagen con optimizaciones
         
         Args:
             image: Imagen de entrada (numpy array o ruta)
+            use_cache: Si True, usa cache si el frame no cambió mucho
             
         Returns:
             list: Lista de detecciones con información de objetos
         """
         try:
-            # Ejecutar detección
-            results = self.model(image, conf=self.detection_threshold)
+            # Frame skipping para mejor rendimiento
+            self.frame_count += 1
+            if self.frame_count % self.frame_skip != 0 and use_cache:
+                return self.last_detections
+            
+            # Redimensionar para procesamiento más rápido
+            original_image = image.copy() if isinstance(image, np.ndarray) else cv2.imread(image)
+            if original_image is None:
+                return []
+            
+            h_orig, w_orig = original_image.shape[:2]
+            
+            # Redimensionar solo si es necesario
+            if max(h_orig, w_orig) > self.process_resolution:
+                resized_image, (scale_x, scale_y) = self._resize_for_detection(original_image)
+            else:
+                resized_image = original_image
+                scale_x, scale_y = 1.0, 1.0
+            
+            # Ejecutar detección en imagen redimensionada (más rápido)
+            results = self.model(
+                resized_image, 
+                conf=self.detection_threshold,
+                imgsz=self.process_resolution,
+                device=self.device,
+                verbose=False  # Reducir output
+            )
             
             detections = []
             
@@ -103,8 +210,14 @@ class ObjectDetector:
                 boxes = result.boxes
                 if boxes is not None:
                     for box in boxes:
-                        # Obtener coordenadas del bounding box
+                        # Obtener coordenadas del bounding box (en imagen redimensionada)
                         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        
+                        # Escalar coordenadas de vuelta a tamaño original
+                        x1 = int(x1 * scale_x)
+                        y1 = int(y1 * scale_y)
+                        x2 = int(x2 * scale_x)
+                        y2 = int(y2 * scale_y)
                         
                         # Obtener confianza y clase
                         confidence = box.conf[0].cpu().numpy()
@@ -124,15 +237,18 @@ class ObjectDetector:
                             'product_name': product_name,
                             'confidence': float(confidence),
                             'bbox': {
-                                'x1': int(x1),
-                                'y1': int(y1),
-                                'x2': int(x2),
-                                'y2': int(y2)
+                                'x1': x1,
+                                'y1': y1,
+                                'x2': x2,
+                                'y2': y2
                             },
                             'timestamp': datetime.now().isoformat()
                         }
                         
                         detections.append(detection)
+            
+            # Guardar en cache
+            self.last_detections = detections
             
             return detections
             
@@ -367,19 +483,36 @@ class ObjectDetector:
         return self.custom_trainer.delete_product(product_name)
 
 class CameraHandler:
-    """Manejador para la cámara web"""
+    """Manejador para la cámara web con optimizaciones"""
     
     def __init__(self, camera_index=0):
         self.camera_index = camera_index
         self.cap = None
         self.is_running = False
+        
+        # Configuración de optimización
+        self.capture_width = 640  # Ancho optimizado
+        self.capture_height = 480  # Alto optimizado
+        self.fps = 30  # FPS objetivo
+        self.buffer_size = 1  # Reducir buffer para menor latencia
     
     def start_camera(self):
-        """Inicia la cámara"""
+        """Inicia la cámara con configuraciones optimizadas"""
         self.cap = cv2.VideoCapture(self.camera_index)
         if not self.cap.isOpened():
             raise Exception(f"No se pudo abrir la cámara {self.camera_index}")
+        
+        # Configuraciones optimizadas
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_height)
+        self.cap.set(cv2.CAP_PROP_FPS, self.fps)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, self.buffer_size)  # Reducir latencia
+        
+        # Optimizaciones adicionales
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)  # Desactivar autofocus si es posible
+        
         self.is_running = True
+        print(f"Cámara iniciada: {self.capture_width}x{self.capture_height} @ {self.fps}fps")
     
     def stop_camera(self):
         """Detiene la cámara"""
@@ -388,10 +521,11 @@ class CameraHandler:
         self.is_running = False
     
     def get_frame(self):
-        """Obtiene un frame de la cámara"""
+        """Obtiene un frame de la cámara optimizado"""
         if not self.cap or not self.is_running:
             return None
         
+        # Leer frame y descartar frames en buffer para reducir latencia
         ret, frame = self.cap.read()
         if ret:
             return frame
