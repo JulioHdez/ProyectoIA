@@ -17,7 +17,7 @@ class ObjectDetector:
             model_path (str): Ruta al modelo YOLO
         """
         self.base_model_path = model_path
-        self.detection_threshold = 0.5
+        self.detection_threshold = 0.25  # Threshold más bajo para detectar más objetos
         
         # Configuración de optimización
         self.process_resolution = 640  # Resolución para procesamiento (más rápido)
@@ -34,15 +34,16 @@ class ObjectDetector:
         # Inicializar entrenador personalizado
         self.custom_trainer = CustomProductTrainer(model_path)
         
-        # Intentar cargar modelo personalizado primero
-        if self.custom_trainer.load_custom_model():
-            self.model = self.custom_trainer.model
-            self.class_names = self.model.names
-            print("Usando modelo personalizado")
-        else:
-            self.model = YOLO(model_path)
-            self.class_names = self.model.names
-            print("Usando modelo base")
+        # Usar modelo base YOLO por defecto (como al inicio del proyecto)
+        # Esto detecta todos los objetos comunes (botellas, teléfonos, laptops, etc.)
+        self.using_custom_model = False
+        self.model = YOLO(model_path)
+        self.class_names = self.model.names
+        print("=" * 60)
+        print("Usando modelo base YOLO (detecta objetos comunes)")
+        print(f"Total de clases disponibles: {len(self.class_names)}")
+        print("Ejemplos: botella, teléfono, laptop, taza, libro, etc.")
+        print("=" * 60)
         
         # Configurar modelo para mejor rendimiento
         self._optimize_model()
@@ -92,11 +93,21 @@ class ObjectDetector:
         if self.custom_trainer.load_custom_model():
             self.model = self.custom_trainer.model
             self.class_names = self.model.names
+            self.using_custom_model = True
             print("Modelo personalizado recargado")
             return True
         else:
             print("No se encontró modelo personalizado")
+            self.using_custom_model = False
             return False
+    
+    def use_base_model(self):
+        """Cambia al modelo base YOLO para detectar objetos comunes"""
+        self.model = YOLO(self.base_model_path)
+        self.class_names = self.model.names
+        self.using_custom_model = False
+        print("Cambiado a modelo base YOLO")
+        return True
     
     def _optimize_model(self):
         """Optimiza el modelo para mejor rendimiento"""
@@ -206,9 +217,16 @@ class ObjectDetector:
             
             detections = []
             
+            # Debug: verificar si hay resultados (solo ocasionalmente para no saturar)
+            if len(results) == 0 and self.frame_count % 60 == 0:
+                print("Advertencia: El modelo no devolvió resultados")
+            
             for result in results:
                 boxes = result.boxes
-                if boxes is not None:
+                if boxes is not None and len(boxes) > 0:
+                    # Debug solo ocasionalmente
+                    if self.frame_count % 30 == 0:
+                        print(f"Encontradas {len(boxes)} cajas de detección")
                     for box in boxes:
                         # Obtener coordenadas del bounding box (en imagen redimensionada)
                         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
@@ -225,10 +243,10 @@ class ObjectDetector:
                         class_name = self.class_names[class_id]
                         
                         # Si es un modelo personalizado, usar el nombre de la clase directamente
-                        if hasattr(self.custom_trainer, 'model') and self.custom_trainer.model == self.model:
+                        if self.using_custom_model:
                             product_name = class_name
                         else:
-                            # Mapear a nombre de producto en español para modelo base
+                            # Mapear a nombre de producto en español para modelo base YOLO
                             product_name = self.product_mapping.get(class_name, class_name)
                         
                         detection = {

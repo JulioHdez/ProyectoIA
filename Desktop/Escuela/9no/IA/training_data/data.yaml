@@ -3,5 +3,5 @@ path: C:\Users\Julio\Desktop\Escuela\9no\IA\training_data
 train: images
 val: images
 
-nc: 1
-names: ['Pluma']
+nc: 2
+names: ['Pluma', 'Pluma Negra']

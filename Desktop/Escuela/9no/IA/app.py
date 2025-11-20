@@ -46,7 +46,8 @@ def welcome():
     """Pantalla de inicio - Selección de modo"""
     return render_template('welcome.html')
 
-@app.route('/admin')
+@app.route('/admin', endpoint='admin_dashboard')
+@app.route('/index', endpoint='index')
 def admin_dashboard():
     """Panel de administración"""
     # Estadísticas rápidas
@@ -399,6 +400,19 @@ def set_optimization_level():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/switch_to_base_model', methods=['POST'])
+def switch_to_base_model():
+    """Cambiar al modelo base YOLO para detectar objetos comunes"""
+    try:
+        detector.use_base_model()
+        return jsonify({
+            'status': 'success',
+            'message': 'Cambiado a modelo base YOLO. Ahora detectará objetos comunes (botellas, teléfonos, laptops, etc.)',
+            'using_custom': False
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/get_detection_results')
 def get_detection_results():
     """Obtener resultados de detección en tiempo real (optimizado)"""
@@ -409,6 +423,23 @@ def get_detection_results():
         if frame is not None:
             # Usar cache para frames intermedios (frame skipping)
             detections = detector.detect_objects(frame, use_cache=True)
+            
+            # Debug: imprimir número de detecciones ocasionalmente
+            import time
+            if not hasattr(get_detection_results, 'last_log_time'):
+                get_detection_results.last_log_time = 0
+            current_time = time.time()
+            if current_time - get_detection_results.last_log_time > 5:  # Log cada 5 segundos
+                model_type = "personalizado" if detector.using_custom_model else "base YOLO"
+                print(f"[{model_type}] Detecciones encontradas: {len(detections)} (threshold: {detector.detection_threshold})")
+                if len(detections) > 0:
+                    for det in detections[:3]:  # Mostrar solo las primeras 3
+                        print(f"  - {det.get('product_name', 'N/A')}: {det.get('confidence', 0):.2f}")
+                elif detector.using_custom_model:
+                    print("  ⚠️  Usando modelo personalizado. Solo detecta productos entrenados.")
+                    print("  💡 Sugerencia: Si no detecta objetos, cambia al modelo base YOLO")
+                get_detection_results.last_log_time = current_time
+            
             annotated_frame = detector.draw_detections(frame, detections)
             
             # Optimizar compresión de imagen para menor tamaño
@@ -498,12 +529,32 @@ def add_detected_product():
 def sales():
     """Página de ventas"""
     today = date.today()
+    
+    # Obtener todas las ventas ordenadas por fecha y hora (más recientes primero)
+    all_sales = Sale.query.order_by(Sale.sale_time.desc()).all()
+    
+    # Ventas de hoy
     sales_today = Sale.query.filter(Sale.sale_date == today).all()
     
     # Estadísticas del día
     stats = get_daily_sales_stats(today)
     
-    return render_template('sales.html', sales=sales_today, stats=stats)
+    # Estadísticas generales
+    total_all_sales = db.session.query(db.func.sum(Sale.total_price)).scalar() or 0
+    total_all_products = db.session.query(db.func.sum(Sale.quantity)).scalar() or 0
+    total_transactions = Sale.query.count()
+    
+    general_stats = {
+        'total_sales': float(total_all_sales),
+        'total_products_sold': int(total_all_products),
+        'total_transactions': total_transactions
+    }
+    
+    return render_template('sales.html', 
+                         sales=all_sales, 
+                         sales_today=sales_today,
+                         stats=stats, 
+                         general_stats=general_stats)
 
 @app.route('/reports')
 def reports():

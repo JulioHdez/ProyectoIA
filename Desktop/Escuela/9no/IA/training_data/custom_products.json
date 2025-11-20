@@ -16,5 +16,23 @@
     ],
     "created_at": "2025-10-28T20:04:37.773785",
     "last_updated": "2025-10-28T20:04:37.773785"
+  },
+  "Pluma Negra": {
+    "name": "Pluma Negra",
+    "image_count": 10,
+    "image_paths": [
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_0_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_1_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_2_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_3_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_4_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_5_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_6_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_7_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_8_20251119_195755.jpg",
+      "training_data\\raw_images\\Pluma Negra\\Pluma Negra_9_20251119_195755.jpg"
+    ],
+    "created_at": "2025-11-19T19:57:55.383087",
+    "last_updated": "2025-11-19T19:57:55.383087"
   }
 }

@@ -13,13 +13,70 @@
             min-height: 100vh;
             padding: 2rem 0;
         }
+        .camera-container .container-fluid {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
         .camera-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-sm);
-            padding: 2rem;
+            padding: 2rem 2.5rem;
             margin-bottom: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .resizable-panel {
+            resize: horizontal;
+            overflow: auto;
+            min-width: 300px;
+            max-width: 800px;
+        }
+        .resizable-vertical {
+            resize: vertical;
+            overflow: auto;
+            min-height: 200px;
+            max-height: 800px;
+        }
+        .resizable-both {
+            resize: both;
+            overflow: hidden;
+            min-width: 250px;
+            min-height: 200px;
+            max-width: 1000px;
+            max-height: 1000px;
+            position: relative;
+        }
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--info, #60a5fa);
+            border-top-left-radius: 8px;
+            cursor: nwse-resize;
+            z-index: 10;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .resize-handle:hover {
+            opacity: 1;
+        }
+        .resize-handle::after {
+            content: '⋰';
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            color: white;
+            font-size: 12px;
+            line-height: 1;
+        }
+        .camera-card h3 {
+            font-size: 1.5rem;
         }
         .video-container {
             position: relative;
@@ -31,8 +88,14 @@
         }
         #videoStream {
             width: 100%;
-            height: 400px;
-            object-fit: cover;
+            height: 550px;
+            object-fit: contain;
+            background: #000;
+        }
+        .video-container {
+            height: 550px;
+            width: 100%;
+            box-sizing: border-box;
         }
         .detection-overlay {
             position: absolute;
@@ -63,12 +126,29 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            padding: 1.5rem;
-            margin-bottom: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-sizing: border-box;
         }
         .detection-results {
-            max-height: 300px;
+            max-height: 450px;
             overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .detection-item {
+            width: 100%;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+        .detection-item h6 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .detection-item small {
+            font-size: 0.95rem;
         }
         .detection-item {
             background: var(--bg-card);
@@ -110,8 +190,8 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
-                            <i class="fas fa-home me-1"></i>Admin
+                        <a class="nav-link" href="{{ url_for('welcome') }}">
+                            <i class="fas fa-home me-1"></i>Inicio
                         </a>
                     </li>
                     <li class="nav-item">
@@ -155,7 +235,7 @@
     </nav>
 
     <div class="camera-container">
-        <div class="container">
+        <div class="container-fluid px-4">
             <div class="row">
                 <div class="col-12">
                     <div class="text-center mb-4">
@@ -170,10 +250,11 @@
                 </div>
             </div>
 
-            <div class="row">
+            <div class="row g-3">
                 <!-- Panel de Cámara -->
-                <div class="col-lg-8">
-                    <div class="camera-card">
+                <div class="col-12 col-lg-8 col-xl-8">
+                    <div class="camera-card resizable-vertical" style="position: relative;">
+                        <div class="resize-handle" style="cursor: ns-resize; bottom: 0; right: 0; border-top-left-radius: 8px; border-bottom-left-radius: 0;" title="Arrastra para redimensionar altura"></div>
                         <h3 class="mb-3">
                             <i class="fas fa-video me-2"></i>Stream de Cámara
                         </h3>
@@ -199,10 +280,10 @@
                         </div>
 
                         <!-- Contenedor de Video -->
-                        <div class="video-container">
-                            <img id="videoStream" src="" alt="Stream de cámara" style="display: none;">
+                        <div class="video-container" style="height: 550px;">
+                            <img id="videoStream" src="" alt="Stream de cámara" style="display: none; width: 100%; height: 550px; object-fit: contain;">
                             <div class="detection-overlay" id="detectionOverlay"></div>
-                            <div class="d-flex align-items-center justify-content-center h-100" id="placeholder">
+                            <div class="d-flex align-items-center justify-content-center" id="placeholder" style="height: 550px;">
                                 <div class="text-center text-muted">
                                     <i class="fas fa-camera fa-3x mb-3"></i>
                                     <h4>Presiona "Iniciar Detección" para comenzar</h4>
@@ -222,8 +303,9 @@
                 </div>
 
                 <!-- Panel de Resultados -->
-                <div class="col-lg-4">
-                    <div class="camera-card">
+                <div class="col-12 col-lg-4 col-xl-4">
+                    <div class="camera-card resizable-both" style="position: relative;">
+                        <div class="resize-handle" title="Arrastra para redimensionar"></div>
                         <h3 class="mb-3">
                             <i class="fas fa-search me-2"></i>Detecciones
                         </h3>
@@ -245,20 +327,23 @@
                     </div>
 
                     <!-- Estadísticas -->
-                    <div class="camera-card">
+                    <div class="camera-card resizable-both" style="position: relative;">
+                        <div class="resize-handle" title="Arrastra para redimensionar"></div>
                         <h3 class="mb-3">
                             <i class="fas fa-chart-bar me-2"></i>Estadísticas
                         </h3>
                         <div class="row text-center">
                             <div class="col-6">
-                                <div class="border-end">
+                                <div class="border-end pe-3">
                                     <h4 class="text-primary mb-1" id="totalDetections">0</h4>
                                     <small class="text-muted">Detecciones</small>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <h4 class="text-success mb-1" id="productsAdded">0</h4>
-                                <small class="text-muted">Agregados</small>
+                                <div class="ps-3">
+                                    <h4 class="text-success mb-1" id="productsAdded">0</h4>
+                                    <small class="text-muted">Agregados</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -275,7 +360,7 @@
                 <strong class="me-auto">Smart Cart</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
             </div>
-            <div class="toast-body" id="alertMessage">
+            <div class="toast-body text-dark" id="alertMessage" style="color: #000 !important;">
                 Mensaje de alerta
             </div>
         </div>
@@ -294,7 +379,20 @@
             const alertMessage = document.getElementById('alertMessage');
             
             alertMessage.textContent = message;
-            alertToast.className = `toast ${type === 'error' ? 'bg-danger text-white' : ''}`;
+            // Asegurar que el texto siempre sea negro
+            alertMessage.style.color = '#000';
+            
+            // Aplicar clases según el tipo, pero mantener texto negro
+            if (type === 'error') {
+                alertToast.className = 'toast bg-danger';
+                alertMessage.style.color = '#fff'; // Para errores, mantener texto blanco sobre fondo rojo
+            } else if (type === 'success') {
+                alertToast.className = 'toast bg-success';
+                alertMessage.style.color = '#000';
+            } else {
+                alertToast.className = 'toast';
+                alertMessage.style.color = '#000';
+            }
             
             const toast = new bootstrap.Toast(alertToast);
             toast.show();
@@ -379,6 +477,36 @@
             });
         }
 
+        // Función para cerrar la cámara automáticamente
+        function cleanupCamera() {
+            if (isDetecting) {
+                stopDetection();
+            }
+        }
+
+        // Cerrar cámara al salir de la página
+        window.addEventListener('beforeunload', function() {
+            cleanupCamera();
+        });
+
+        // Cerrar cámara cuando la página pierde el foco (cambio de pestaña o ventana)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && isDetecting) {
+                cleanupCamera();
+            }
+        });
+
+        // Cerrar cámara cuando se hace clic en un enlace de navegación
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href && !link.href.includes('#')) {
+                // Si es un enlace a otra página (no ancla)
+                if (isDetecting) {
+                    cleanupCamera();
+                }
+            }
+        });
+
         function getDetectionResults() {
             if (!isDetecting) return;
 
@@ -417,14 +545,15 @@
             currentDetections = detections;
 
             detections.forEach((detection, index) => {
-                const confidence = Math.round(detection.confidence * 100);
+                const confidence = Math.round((detection.confidence || 0) * 100);
                 const confidenceColor = confidence > 70 ? '#28a745' : confidence > 50 ? '#ffc107' : '#dc3545';
+                const productName = detection.product_name || detection.class_name || 'Objeto detectado';
                 
                 html += `
                     <div class="detection-item">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <h6 class="mb-1">${detection.class}</h6>
+                                <h6 class="mb-1">${productName}</h6>
                                 <small class="text-muted">Confianza: ${confidence}%</small>
                             </div>
                             <span class="badge bg-primary">${index + 1}</span>
@@ -456,8 +585,8 @@
             );
 
             const productData = {
-                product_name: bestDetection.product_name || bestDetection.class,
-                confidence: bestDetection.confidence,
+                product_name: bestDetection.product_name || bestDetection.class_name || 'Objeto detectado',
+                confidence: bestDetection.confidence || 0,
                 suggested_price: 10.0 // Precio sugerido por defecto
             };
 
@@ -473,7 +602,8 @@
                 if (data.status === 'success') {
                     productsAdded++;
                     document.getElementById('productsAdded').textContent = productsAdded;
-                    showAlert(`Producto "${bestDetection.class}" agregado al carrito`, 'success');
+                    const productName = bestDetection.product_name || bestDetection.class_name || 'Objeto detectado';
+                    showAlert(`Producto "${productName}" agregado al carrito`, 'success');
                 } else {
                     showAlert('Error al agregar producto: ' + data.message, 'error');
                 }
