@@ -322,6 +322,45 @@ body {
     padding: 1rem 1.25rem;
 }
 
+/* Toasts - Notificaciones */
+.toast {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.toast-header {
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.toast-body {
+    color: #000000 !important;
+    background-color: #f8f9fa;
+    padding: 1rem;
+}
+
+.toast.bg-success .toast-body {
+    color: #000000 !important;
+    background-color: rgba(74, 222, 128, 0.2);
+}
+
+.toast.bg-danger .toast-body {
+    color: #ffffff !important;
+    background-color: rgba(248, 113, 113, 0.9);
+}
+
+.toast.bg-warning .toast-body {
+    color: #000000 !important;
+    background-color: rgba(251, 191, 36, 0.2);
+}
+
+.toast.bg-info .toast-body {
+    color: #000000 !important;
+    background-color: rgba(96, 165, 250, 0.2);
+}
+
 .alert-success {
     background-color: rgba(74, 222, 128, 0.1);
     border-color: var(--success);

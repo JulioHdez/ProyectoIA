@@ -2,8 +2,29 @@
 
 # Configuración de la aplicación Flask
 SECRET_KEY = 'tu_clave_secreta_cambiar_en_produccion'
-SQLALCHEMY_DATABASE_URI = 'sqlite:///smart_cart.db'
+
+# Configuración de Base de Datos
+# SQLite (por defecto) - COMENTADO para usar SQL Server
+# SQLALCHEMY_DATABASE_URI = 'sqlite:///smart_cart.db'
+
+# SQL Server con Windows Authentication (local)
+# ACTIVO: Usando autenticación de Windows en servidor local
+SQLALCHEMY_DATABASE_URI = 'mssql+pyodbc://localhost/smart_cart?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes'
+
+# SQL Server con autenticación SQL (usuario/contraseña)
+# Formato: mssql+pyodbc://usuario:contraseña@servidor:puerto/base_de_datos?driver=ODBC+Driver+17+for+SQL+Server
+# Ejemplo:
+# SQLALCHEMY_DATABASE_URI = 'mssql+pyodbc://sa:contraseña@localhost:1433/smart_cart?driver=ODBC+Driver+17+for+SQL+Server'
+
+# Para usar SQL Server, también necesitas instalar:
+# pip install pyodbc
+
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+# Configuración de almacenamiento de imágenes
+# 'database' = Almacenar en base de datos (SQL Server recomendado)
+# 'filesystem' = Almacenar en carpetas (compatibilidad con versión anterior)
+IMAGE_STORAGE_METHOD = 'database'  # Cambiar a 'filesystem' para usar carpetas
 
 # Configuración de archivos
 UPLOAD_FOLDER = 'uploads'

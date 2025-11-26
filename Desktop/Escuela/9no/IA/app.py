@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import os
 import cv2
+import numpy as np
 import base64
 import json
 from datetime import datetime, date, timedelta
@@ -14,12 +15,17 @@ from io import BytesIO
 import threading
 import time
 
-from models import db, Product, Inventory, Sale, DailyReport, WeeklyReport, get_daily_sales_stats, get_weekly_sales_stats
+from models import db, Product, Inventory, Sale, DailyReport, WeeklyReport, TrainingProduct, TrainingImage, get_daily_sales_stats, get_weekly_sales_stats
 from object_detector import ObjectDetector, CameraHandler
+from database_trainer import DatabaseTrainer
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tu_clave_secreta_aqui'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smart_cart.db'
+# Cargar configuración desde config.py
+import config
+app.config['SQLALCHEMY_DATABASE_URI'] = config.SQLALCHEMY_DATABASE_URI
+app.config['IMAGE_STORAGE_METHOD'] = getattr(config, 'IMAGE_STORAGE_METHOD', 'database')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = getattr(config, 'SQLALCHEMY_TRACK_MODIFICATIONS', False)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configurar ruta estática para productos personalizados
@@ -34,6 +40,14 @@ migrate = Migrate(app, db)
 # Inicializar detector de objetos
 detector = ObjectDetector()
 camera_handler = CameraHandler()
+
+# Inicializar entrenador según método de almacenamiento
+storage_method = app.config.get('IMAGE_STORAGE_METHOD', 'database')
+database_trainer = None
+if storage_method == 'database':
+    database_trainer = DatabaseTrainer()
+    # Reemplazar el entrenador del detector con el de BD
+    detector.custom_trainer = database_trainer
 
 # Variables globales para streaming de cámara
 camera_streaming = False
@@ -615,17 +629,64 @@ def training():
 
 @app.route('/start_training', methods=['POST'])
 def start_training():
-    """Iniciar entrenamiento del modelo personalizado"""
+    """Iniciar entrenamiento del modelo personalizado (YOLO)"""
     try:
         data = request.get_json()
         epochs = data.get('epochs', 50)
         batch_size = data.get('batch_size', 16)
         
         # Iniciar entrenamiento en un hilo separado
-        training_thread = threading.Thread(
-            target=detector.train_custom_model,
-            args=(epochs, batch_size)
-        )
+        def train_yolo():
+            try:
+                # Si estamos usando base de datos, primero extraer imágenes a archivos temporales
+                storage_method = app.config.get('IMAGE_STORAGE_METHOD', 'database')
+                if storage_method == 'database' and database_trainer:
+                    print("[YOLO] Extrayendo imágenes de base de datos a archivos temporales...")
+                    with app.app_context():
+                        if database_trainer.prepare_training_data(for_tensorflow=False):
+                            print("[YOLO] Imágenes extraídas correctamente a training_data/")
+                        else:
+                            print("[YOLO] Error al extraer imágenes de BD")
+                            return
+                
+                # Entrenar modelo
+                success = detector.train_custom_model(epochs, batch_size)
+                
+                if success:
+                    print(f"[YOLO] Entrenamiento completado exitosamente")
+                    
+                    # Si el entrenamiento fue exitoso y estamos usando BD, limpiar carpetas temporales
+                    storage_method = app.config.get('IMAGE_STORAGE_METHOD', 'database')
+                    if storage_method == 'database' and database_trainer:
+                        print("[YOLO] Limpiando archivos temporales después de entrenamiento exitoso...")
+                        with app.app_context():
+                            # Verificar que las imágenes están en BD antes de eliminar
+                            from models import TrainingProduct
+                            products = TrainingProduct.query.all()
+                            total_images_in_db = sum(p.get_image_count() for p in products)
+                            
+                            if total_images_in_db > 0:
+                                # Eliminar carpetas temporales
+                                import shutil
+                                temp_dirs = ['training_data/images', 'training_data/labels']
+                                for temp_dir in temp_dirs:
+                                    if os.path.exists(temp_dir):
+                                        try:
+                                            shutil.rmtree(temp_dir)
+                                            print(f"[YOLO] ✓ Carpeta temporal '{temp_dir}' eliminada")
+                                        except Exception as e:
+                                            print(f"[YOLO] Advertencia: No se pudo eliminar {temp_dir}: {e}")
+                                print(f"[YOLO] Todas las imágenes están guardadas en la base de datos ({total_images_in_db} imágenes)")
+                            else:
+                                print("[YOLO] Advertencia: No se encontraron imágenes en BD, no se eliminan archivos temporales")
+                else:
+                    print("[YOLO] Error en el entrenamiento")
+            except Exception as e:
+                print(f"[YOLO] Error en entrenamiento: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        training_thread = threading.Thread(target=train_yolo)
         training_thread.daemon = True
         training_thread.start()
         
@@ -670,6 +731,215 @@ def get_training_status():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+# ========== ENDPOINTS DE TENSORFLOW ==========
+
+@app.route('/start_tensorflow_training', methods=['POST'])
+def start_tensorflow_training():
+    """Iniciar entrenamiento con TensorFlow"""
+    try:
+        data = request.get_json()
+        epochs = data.get('epochs', 50)
+        batch_size = data.get('batch_size', 32)
+        model_type = data.get('model_type', 'mobilenet')  # mobilenet, efficientnet, resnet, custom
+        product_dirs = data.get('product_dirs', None)  # None = todos los productos
+        
+        # Iniciar entrenamiento en un hilo separado
+        def train_tensorflow():
+            try:
+                # Si estamos usando base de datos, primero extraer imágenes a archivos temporales
+                storage_method = app.config.get('IMAGE_STORAGE_METHOD', 'database')
+                if storage_method == 'database' and database_trainer:
+                    print("[TensorFlow] Extrayendo imágenes de base de datos a archivos temporales...")
+                    with app.app_context():
+                        # Preparar datos desde BD para TensorFlow (extrae a estructura custom_products/)
+                        if database_trainer.prepare_training_data(for_tensorflow=True):
+                            print("[TensorFlow] Imágenes extraídas correctamente a custom_products/")
+                            # TensorFlow buscará en custom_products/ que es el directorio por defecto
+                        else:
+                            print("[TensorFlow] Error al extraer imágenes de BD")
+                            return
+                
+                result = detector.train_tensorflow_model(
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    model_type=model_type,
+                    product_dirs=product_dirs
+                )
+                if result:
+                    print(f"Entrenamiento TensorFlow completado. Accuracy: {result.get('test_accuracy', 0):.4f}")
+                    
+                    # Si el entrenamiento fue exitoso y estamos usando BD, limpiar carpetas temporales
+                    if storage_method == 'database' and database_trainer:
+                        print("[TensorFlow] Limpiando archivos temporales después de entrenamiento exitoso...")
+                        with app.app_context():
+                            # Verificar que las imágenes están en BD antes de eliminar
+                            products = TrainingProduct.query.all()
+                            total_images_in_db = sum(p.get_image_count() for p in products)
+                            
+                            if total_images_in_db > 0:
+                                # Eliminar carpeta temporal custom_products/
+                                import shutil
+                                temp_dir = 'custom_products'
+                                if os.path.exists(temp_dir):
+                                    try:
+                                        shutil.rmtree(temp_dir)
+                                        print(f"[TensorFlow] ✓ Carpeta temporal '{temp_dir}' eliminada correctamente")
+                                        print(f"[TensorFlow] Todas las imágenes están guardadas en la base de datos ({total_images_in_db} imágenes)")
+                                    except Exception as e:
+                                        print(f"[TensorFlow] Advertencia: No se pudo eliminar carpeta temporal: {e}")
+                            else:
+                                print("[TensorFlow] Advertencia: No se encontraron imágenes en BD, no se eliminan archivos temporales")
+                else:
+                    print("Error en el entrenamiento TensorFlow")
+            except Exception as e:
+                print(f"Error en entrenamiento TensorFlow: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        training_thread = threading.Thread(target=train_tensorflow)
+        training_thread.daemon = True
+        training_thread.start()
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Entrenamiento TensorFlow iniciado (modelo: {model_type}, épocas: {epochs})'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/load_tensorflow_model', methods=['POST'])
+def load_tensorflow_model():
+    """Cargar modelo de TensorFlow"""
+    try:
+        data = request.get_json()
+        model_path = data.get('model_path', None)  # None = cargar el más reciente
+        
+        success = detector.load_tensorflow_model(model_path)
+        
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Modelo TensorFlow cargado correctamente'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'No se pudo cargar el modelo TensorFlow'
+            })
+            
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/get_tensorflow_status')
+def get_tensorflow_status():
+    """Obtener estado del entrenador de TensorFlow"""
+    try:
+        status = detector.get_tensorflow_status()
+        return jsonify({'status': 'success', 'data': status})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/detect_with_tensorflow', methods=['POST'])
+def detect_with_tensorflow():
+    """Detectar productos usando TensorFlow"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No se proporcionó imagen'})
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'status': 'error', 'message': 'Archivo vacío'})
+        
+        # Leer imagen
+        image_bytes = file.read()
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if image is None:
+            return jsonify({'status': 'error', 'message': 'No se pudo decodificar la imagen'})
+        
+        # Detectar con TensorFlow
+        detections = detector.detect_with_tensorflow(image)
+        
+        return jsonify({
+            'status': 'success',
+            'detections': detections,
+            'count': len(detections)
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/detect_frame_yolo', methods=['POST'])
+def detect_frame_yolo():
+    """Detectar objetos en un frame usando YOLO para mostrar silueta durante captura"""
+    try:
+        data = request.get_json()
+        if 'image' not in data:
+            return jsonify({'status': 'error', 'message': 'No se proporcionó imagen'})
+        
+        # Decodificar imagen base64
+        import base64
+        image_data = data['image']
+        if image_data.startswith('data:image'):
+            image_data = image_data.split(',')[1]
+        
+        image_bytes = base64.b64decode(image_data)
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if image is None:
+            return jsonify({'status': 'error', 'message': 'No se pudo decodificar la imagen'})
+        
+        # Detectar objetos con YOLO
+        detections = detector.detect_objects(image)
+        
+        # Crear imagen con solo las siluetas (bounding boxes)
+        annotated_image = image.copy()
+        
+        # Dibujar solo el bounding box más confiable
+        if detections:
+            # Ordenar por confianza y tomar el más confiable
+            best_detection = max(detections, key=lambda x: x['confidence'])
+            bbox = best_detection['bbox']
+            x1, y1, x2, y2 = int(bbox['x1']), int(bbox['y1']), int(bbox['x2']), int(bbox['y2'])
+            
+            # Asegurar que las coordenadas estén dentro de la imagen
+            h, w = image.shape[:2]
+            x1 = max(0, min(x1, w))
+            y1 = max(0, min(y1, h))
+            x2 = max(0, min(x2, w))
+            y2 = max(0, min(y2, h))
+            
+            # Crear máscara para mostrar solo el objeto (silueta)
+            mask = np.zeros(image.shape[:2], dtype=np.uint8)
+            cv2.rectangle(mask, (x1, y1), (x2, y2), 255, -1)
+            
+            # Crear imagen con fondo oscurecido
+            annotated_image = image.copy()
+            # Oscurecer todo el fondo (fuera del bounding box)
+            annotated_image[mask == 0] = (annotated_image[mask == 0] * 0.2).astype(np.uint8)
+            
+            # Dibujar solo el rectángulo verde para la silueta (sin texto)
+            cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (0, 255, 0), 3)
+        
+        # Convertir a base64 para enviar
+        _, buffer = cv2.imencode('.jpg', annotated_image)
+        image_base64 = base64.b64encode(buffer).decode('utf-8')
+        
+        return jsonify({
+            'status': 'success',
+            'image': f'data:image/jpeg;base64,{image_base64}',
+            'detections': detections,
+            'count': len(detections)
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/get_custom_products')
 def get_custom_products():
     """Obtener información detallada de productos personalizados"""
@@ -690,20 +960,46 @@ def get_product_images(product_name):
 
 @app.route('/static/custom_products/<product_name>/<filename>')
 def serve_custom_product_image(product_name, filename):
-    """Servir imágenes de productos personalizados"""
+    """Servir imágenes de productos personalizados desde BD o archivos"""
     try:
-        import os
-        from flask import send_from_directory
+        storage_method = app.config.get('IMAGE_STORAGE_METHOD', 'database')
         
-        # Construir la ruta del archivo
-        custom_data_dir = detector.custom_trainer.custom_data_dir
-        product_dir = os.path.join(custom_data_dir, product_name)
-        file_path = os.path.join(product_dir, filename)
-        
-        # Verificar que el archivo existe y está dentro del directorio permitido
-        if os.path.exists(file_path) and file_path.startswith(custom_data_dir):
-            return send_from_directory(product_dir, filename)
+        if storage_method == 'database' and database_trainer:
+            # Servir desde base de datos
+            image_data = database_trainer.get_product_image_data(product_name, filename)
+            if image_data:
+                from flask import Response
+                return Response(
+                    image_data,
+                    mimetype='image/jpeg',
+                    headers={'Content-Disposition': f'inline; filename={filename}'}
+                )
+            else:
+                return "Imagen no encontrada en BD", 404
         else:
+            # Servir desde archivos (compatibilidad con versión anterior)
+            import os
+            from flask import send_from_directory
+            
+            custom_data_dir = detector.custom_trainer.custom_data_dir
+            training_data_dir = detector.custom_trainer.training_data_dir
+            
+            # Buscar en diferentes ubicaciones posibles
+            possible_paths = [
+                os.path.join(custom_data_dir, product_name, filename),
+                os.path.join(custom_data_dir, product_name, 'images', filename),
+                os.path.join(custom_data_dir, product_name, 'training', 'images', filename),
+                os.path.join(training_data_dir, 'images', filename),
+                os.path.join(training_data_dir, 'raw_images', product_name, filename),
+            ]
+            
+            for file_path in possible_paths:
+                if os.path.exists(file_path):
+                    if (file_path.startswith(custom_data_dir) or 
+                        file_path.startswith(training_data_dir)):
+                        product_dir = os.path.dirname(file_path)
+                        return send_from_directory(product_dir, os.path.basename(file_path))
+            
             return "Archivo no encontrado", 404
     except Exception as e:
         return f"Error al servir imagen: {str(e)}", 500
@@ -717,8 +1013,20 @@ def capture_images_from_web():
         images = data['images']
         num_images = data.get('num_images', len(images))
         
-        # Usar el método de captura desde web
-        success = detector.custom_trainer.capture_images_from_web(product_name, images, num_images)
+        # Verificar método de almacenamiento y usar el entrenador correcto
+        storage_method = app.config.get('IMAGE_STORAGE_METHOD', 'database')
+        
+        print(f"[capture_images_from_web] Método de almacenamiento: {storage_method}")
+        print(f"[capture_images_from_web] Producto: {product_name}, Imágenes: {len(images)}")
+        
+        if storage_method == 'database' and database_trainer:
+            # Usar DatabaseTrainer para guardar en BD (ya estamos en contexto de Flask)
+            print(f"[capture_images_from_web] Usando DatabaseTrainer")
+            success = database_trainer.capture_images_from_web(product_name, images, num_images)
+        else:
+            # Usar CustomProductTrainer para guardar en archivos
+            print(f"[capture_images_from_web] Usando CustomProductTrainer (archivos)")
+            success = detector.custom_trainer.capture_images_from_web(product_name, images, num_images)
         
         if success:
             return jsonify({

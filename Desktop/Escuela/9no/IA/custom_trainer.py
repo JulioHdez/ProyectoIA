@@ -399,25 +399,62 @@ names: {list(self.custom_products.keys())}
     
     def get_product_images(self, product_name):
         """Obtiene las imágenes de un producto específico"""
-        if product_name not in self.custom_products:
-            return []
-        
-        product_info = self.custom_products[product_name]
-        image_paths = product_info.get('image_paths', [])
-        
-        # Obtener solo los nombres de archivo
         image_names = []
-        for image_path in image_paths:
-            if os.path.exists(image_path):
-                image_names.append(os.path.basename(image_path))
-            else:
-                # Si la imagen no existe en la ruta original, buscar en custom_products
-                filename = os.path.basename(image_path)
-                custom_path = os.path.join(self.custom_data_dir, product_name, filename)
-                if os.path.exists(custom_path):
-                    image_names.append(filename)
         
-        return image_names
+        # Buscar en custom_products directamente
+        product_dir = os.path.join(self.custom_data_dir, product_name)
+        if os.path.exists(product_dir):
+            # Buscar imágenes en la carpeta del producto
+            for filename in os.listdir(product_dir):
+                if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                    image_names.append(filename)
+            
+            # Buscar en subcarpetas
+            images_dir = os.path.join(product_dir, 'images')
+            if os.path.exists(images_dir):
+                for filename in os.listdir(images_dir):
+                    if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                        if filename not in image_names:
+                            image_names.append(filename)
+            
+            training_images_dir = os.path.join(product_dir, 'training', 'images')
+            if os.path.exists(training_images_dir):
+                for filename in os.listdir(training_images_dir):
+                    if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                        if filename not in image_names:
+                            image_names.append(filename)
+        
+        # Si no se encontraron imágenes, buscar en custom_products del JSON
+        if not image_names and product_name in self.custom_products:
+            product_info = self.custom_products[product_name]
+            image_paths = product_info.get('image_paths', [])
+            
+            for image_path in image_paths:
+                if os.path.exists(image_path):
+                    image_names.append(os.path.basename(image_path))
+                else:
+                    # Buscar en diferentes ubicaciones
+                    filename = os.path.basename(image_path)
+                    possible_paths = [
+                        os.path.join(self.custom_data_dir, product_name, filename),
+                        os.path.join(self.custom_data_dir, product_name, 'images', filename),
+                        os.path.join(self.custom_data_dir, product_name, 'training', 'images', filename),
+                    ]
+                    
+                    for path in possible_paths:
+                        if os.path.exists(path) and filename not in image_names:
+                            image_names.append(filename)
+                            break
+        
+        # Eliminar duplicados manteniendo el orden
+        seen = set()
+        unique_images = []
+        for img in image_names:
+            if img not in seen:
+                seen.add(img)
+                unique_images.append(img)
+        
+        return unique_images
     
     def delete_product(self, product_name):
         """Elimina un producto del entrenamiento"""

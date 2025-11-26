@@ -6,20 +6,21 @@
     <title>Entrenamiento Personalizado - Smart Shopping Cart</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
     <style>
         .training-container {
-            background: var(--bg-primary, #0f0f0f);
+            background: var(--bg-primary);
             min-height: 100vh;
             padding: 2rem 0;
         }
         .training-card {
-            background: var(--bg-card, #1e1e1e);
-            border: 1px solid var(--border-color, #333333);
-            border-radius: var(--radius-md, 12px);
-            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.3));
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
             padding: 2rem;
             margin-bottom: 2rem;
-            color: var(--text-primary, #e0e0e0);
+            color: var(--text-primary);
         }
         .status-indicator {
             display: inline-block;
@@ -29,11 +30,11 @@
             margin-right: 8px;
         }
         .status-active {
-            background: var(--success, #4ade80);
+            background: var(--success);
             animation: pulse 2s infinite;
         }
         .status-inactive {
-            background: var(--text-muted, #6a6a6a);
+            background: var(--text-muted);
         }
         @keyframes pulse {
             0% { opacity: 1; }
@@ -41,17 +42,17 @@
             100% { opacity: 1; }
         }
         .product-item {
-            background: var(--bg-tertiary, #252525);
-            border: 1px solid var(--border-color, #333333);
-            border-radius: var(--radius-sm, 8px);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
             padding: 1rem;
             margin-bottom: 0.5rem;
-            border-left: 4px solid var(--info, #60a5fa);
-            color: var(--text-primary, #e0e0e0);
+            border-left: 4px solid var(--info);
+            color: var(--text-primary);
         }
         .product-item:hover {
-            background: var(--bg-hover, #2a2a2a);
-            border-color: var(--border-hover, #404040);
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
         }
         .navbar-brand {
             font-weight: bold;
@@ -107,51 +108,7 @@
             background-color: var(--success, #4ade80);
         }
         
-        /* Ajustes para inputs y botones en tema oscuro */
-        .form-control, .form-select {
-            background-color: var(--bg-tertiary, #252525);
-            border-color: var(--border-color, #333333);
-            color: var(--text-primary, #e0e0e0);
-        }
-        .form-control:focus, .form-select:focus {
-            background-color: var(--bg-tertiary, #252525);
-            border-color: var(--info, #60a5fa);
-            color: var(--text-primary, #e0e0e0);
-            box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.25);
-        }
-        .btn-primary {
-            background-color: var(--info, #60a5fa);
-            border-color: var(--info, #60a5fa);
-        }
-        .btn-primary:hover {
-            background-color: #4a9eff;
-            border-color: #4a9eff;
-        }
-        .btn-success {
-            background-color: var(--success, #4ade80);
-            border-color: var(--success, #4ade80);
-            color: #0f0f0f;
-        }
-        .btn-danger {
-            background-color: var(--danger, #f87171);
-            border-color: var(--danger, #f87171);
-        }
-        .text-muted {
-            color: var(--text-muted, #6a6a6a) !important;
-        }
-        .card {
-            background-color: var(--bg-card, #1e1e1e);
-            border-color: var(--border-color, #333333);
-            color: var(--text-primary, #e0e0e0);
-        }
-        .list-group-item {
-            background-color: var(--bg-tertiary, #252525);
-            border-color: var(--border-color, #333333);
-            color: var(--text-primary, #e0e0e0);
-        }
-        .list-group-item:hover {
-            background-color: var(--bg-hover, #2a2a2a);
-        }
+        /* Los estilos de formularios y botones ya están en style.css */
     </style>
 </head>
 <body>
@@ -183,7 +140,12 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('camera') }}">
-                            <i class="fas fa-camera me-1"></i>Cámara
+                            <i class="fas fa-camera me-1"></i>Cámara IA
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('training') }}">
+                            <i class="fas fa-brain me-1"></i>Entrenamiento
                         </a>
                     </li>
                     <li class="nav-item">
@@ -194,11 +156,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('reports') }}">
                             <i class="fas fa-file-alt me-1"></i>Reportes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('training') }}">
-                            <i class="fas fa-brain me-1"></i>Entrenamiento
                         </a>
                     </li>
                 </ul>
@@ -241,6 +198,15 @@
                                 <div class="text-end">
                                     <span class="badge bg-primary" id="productsCount">0</span>
                                     <small class="text-muted">Productos</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">TensorFlow:</small>
+                                    <span class="badge" id="tensorflowStatus">Verificando...</span>
                                 </div>
                             </div>
                         </div>
@@ -310,14 +276,24 @@
 
                         <!-- Interfaz de Captura -->
                         <div id="captureInterface" style="display: none;" class="mt-4">
-                            <div class="video-container mb-3">
-                                <video id="captureVideo" width="100%" height="300" autoplay muted></video>
-                                <canvas id="captureCanvas" style="display: none;"></canvas>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enableYOLODetection" checked>
+                                    <label class="form-check-label" for="enableYOLODetection">
+                                        Detección YOLO en tiempo real (mostrar silueta)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="video-container mb-3 position-relative">
+                                <video id="captureVideo" width="640" height="480" autoplay muted playsinline style="display: block; width: 100%; height: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);"></video>
+                                <canvas id="captureCanvas" width="640" height="480" style="display: none; width: 100%; height: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);"></canvas>
+                                <canvas id="detectionCanvas" style="display: none;"></canvas>
                             </div>
                             
                             <div class="text-center mb-3">
                                 <div class="alert alert-info">
                                     <strong>Capturas:</strong> <span id="captureCount">0</span> / <span id="totalCaptures">10</span>
+                                    <span id="detectionStatus" class="ms-2"></span>
                                 </div>
                             </div>
                             
@@ -350,21 +326,72 @@
                         
                         <form id="trainingForm">
                             <div class="mb-3">
-                                <label for="epochs" class="form-label">Épocas de Entrenamiento</label>
-                                <select class="form-select" id="epochs">
-                                    <option value="25">25 épocas (rápido)</option>
-                                    <option value="50" selected>50 épocas (recomendado)</option>
-                                    <option value="100">100 épocas (preciso)</option>
+                                <label for="trainingType" class="form-label">Tipo de Entrenamiento</label>
+                                <select class="form-select" id="trainingType">
+                                    <option value="yolo" selected>YOLO (Detección de objetos)</option>
+                                    <option value="tensorflow">TensorFlow (Clasificación de imágenes)</option>
                                 </select>
+                                <small class="text-muted">
+                                    <div class="mt-1">
+                                        <strong>YOLO:</strong> Detecta objetos con bounding boxes<br>
+                                        <strong>TensorFlow:</strong> Clasifica imágenes completas
+                                    </div>
+                                </small>
                             </div>
                             
-                            <div class="mb-3">
-                                <label for="batchSize" class="form-label">Tamaño del Batch</label>
-                                <select class="form-select" id="batchSize">
-                                    <option value="8">8 (memoria baja)</option>
-                                    <option value="16" selected>16 (recomendado)</option>
-                                    <option value="32">32 (memoria alta)</option>
-                                </select>
+                            <!-- Configuración YOLO -->
+                            <div id="yoloConfig">
+                                <div class="mb-3">
+                                    <label for="epochs" class="form-label">Épocas de Entrenamiento</label>
+                                    <select class="form-select" id="epochs">
+                                        <option value="25">25 épocas (rápido)</option>
+                                        <option value="50" selected>50 épocas (recomendado)</option>
+                                        <option value="100">100 épocas (preciso)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="batchSize" class="form-label">Tamaño del Batch</label>
+                                    <select class="form-select" id="batchSize">
+                                        <option value="8">8 (memoria baja)</option>
+                                        <option value="16" selected>16 (recomendado)</option>
+                                        <option value="32">32 (memoria alta)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Configuración TensorFlow -->
+                            <div id="tensorflowConfig" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="tfEpochs" class="form-label">Épocas de Entrenamiento</label>
+                                    <select class="form-select" id="tfEpochs">
+                                        <option value="25">25 épocas (rápido)</option>
+                                        <option value="50" selected>50 épocas (recomendado)</option>
+                                        <option value="100">100 épocas (preciso)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="tfBatchSize" class="form-label">Tamaño del Batch</label>
+                                    <select class="form-select" id="tfBatchSize">
+                                        <option value="16">16 (memoria baja)</option>
+                                        <option value="32" selected>32 (recomendado)</option>
+                                        <option value="64">64 (memoria alta)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="tfModelType" class="form-label">Tipo de Modelo</label>
+                                    <select class="form-select" id="tfModelType">
+                                        <option value="mobilenet" selected>MobileNet (rápido y eficiente)</option>
+                                        <option value="efficientnet">EfficientNet (balanceado)</option>
+                                        <option value="resnet">ResNet (muy preciso)</option>
+                                        <option value="custom">Personalizado</option>
+                                    </select>
+                                    <small class="text-muted">
+                                        MobileNet es recomendado para empezar
+                                    </small>
+                                </div>
                             </div>
                             
                             <button type="submit" class="btn btn-success w-100" id="trainBtn" disabled>
@@ -392,7 +419,7 @@
                 <strong class="me-auto">Smart Cart</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
             </div>
-            <div class="toast-body" id="alertMessage">
+            <div class="toast-body" id="alertMessage" style="color: #000000 !important;">
                 Mensaje de alerta
             </div>
         </div>
@@ -440,19 +467,36 @@
         let currentProductName = '';
         let totalImages = 10;
         let currentSort = 'name'; // 'name', 'date', 'images'
+        let yoloDetectionInterval = null;
+        let yoloEnabled = true;
 
         function showAlert(message, type = 'info') {
             const alertToast = document.getElementById('alertToast');
             const alertMessage = document.getElementById('alertMessage');
             
             alertMessage.textContent = message;
-            alertToast.className = `toast ${type === 'error' ? 'bg-danger text-white' : ''}`;
+            
+            // Configurar colores según el tipo
+            if (type === 'error') {
+                alertToast.className = 'toast bg-danger';
+                alertMessage.style.color = '#ffffff !important'; // Blanco para errores (fondo rojo)
+            } else if (type === 'success') {
+                alertToast.className = 'toast bg-success';
+                alertMessage.style.color = '#000000 !important'; // Negro para éxito
+            } else if (type === 'warning') {
+                alertToast.className = 'toast bg-warning';
+                alertMessage.style.color = '#000000 !important'; // Negro para advertencias
+            } else {
+                alertToast.className = 'toast bg-info';
+                alertMessage.style.color = '#000000 !important'; // Negro para info
+            }
             
             const toast = new bootstrap.Toast(alertToast);
             toast.show();
         }
 
         function updateTrainingStatus() {
+            // Actualizar estado YOLO
             fetch('/get_training_status')
             .then(response => response.json())
             .then(data => {
@@ -500,6 +544,36 @@
             })
             .catch(error => {
                 console.error('Error obteniendo estado:', error);
+            });
+            
+            // Actualizar estado TensorFlow
+            fetch('/get_tensorflow_status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const tfStatus = data.data;
+                    const tfStatusBadge = document.getElementById('tensorflowStatus');
+                    
+                    if (tfStatus.available) {
+                        if (tfStatus.model_loaded) {
+                            tfStatusBadge.className = 'badge bg-success';
+                            tfStatusBadge.textContent = 'Disponible (Modelo cargado)';
+                        } else {
+                            tfStatusBadge.className = 'badge bg-info';
+                            tfStatusBadge.textContent = 'Disponible';
+                        }
+                    } else {
+                        tfStatusBadge.className = 'badge bg-secondary';
+                        tfStatusBadge.textContent = 'No disponible';
+                        tfStatusBadge.title = 'Instala TensorFlow: pip install tensorflow==2.13.0';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error obteniendo estado TensorFlow:', error);
+                const tfStatusBadge = document.getElementById('tensorflowStatus');
+                tfStatusBadge.className = 'badge bg-secondary';
+                tfStatusBadge.textContent = 'Error';
             });
         }
 
@@ -551,16 +625,21 @@
             try {
                 // Solicitar acceso a la cámara
                 captureStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 640, height: 480 } 
+                    video: { 
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    } 
                 });
                 
                 const video = document.getElementById('captureVideo');
-                video.srcObject = captureStream;
+                const canvas = document.getElementById('captureCanvas');
                 
                 // Configurar variables
                 currentProductName = productName;
                 totalImages = numImages;
                 capturedImages = [];
+                yoloEnabled = document.getElementById('enableYOLODetection').checked;
                 
                 // Mostrar interfaz de captura
                 document.getElementById('captureInterface').style.display = 'block';
@@ -568,12 +647,192 @@
                 document.getElementById('totalCaptures').textContent = totalImages;
                 document.getElementById('captureCount').textContent = '0';
                 
+                // Asignar stream al video
+                video.srcObject = captureStream;
+                
+                // Esperar a que el video esté listo
+                video.addEventListener('loadedmetadata', () => {
+                    console.log('Video metadata cargada:', video.videoWidth, 'x', video.videoHeight);
+                    
+                    // Configurar canvas con el tamaño del video
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    
+                    // Iniciar detección YOLO o mostrar video directamente
+                    if (yoloEnabled) {
+                        // Mostrar video primero, luego iniciar YOLO
+                        setTimeout(() => {
+                            startYOLODetection();
+                        }, 1000); // Dar tiempo para que el video se muestre
+                    }
+                    // Si YOLO está desactivado, el video se muestra directamente
+                });
+                
+                // También verificar cuando el video puede reproducir
+                video.addEventListener('canplay', () => {
+                    console.log('Video listo para reproducir');
+                    if (!yoloEnabled) {
+                        // Si YOLO está desactivado, asegurar que el video se vea
+                        video.style.display = 'block';
+                        canvas.style.display = 'none';
+                    }
+                });
+                
+                // Forzar play del video
+                video.play().catch(err => {
+                    console.error('Error al reproducir video:', err);
+                    showAlert('Error al iniciar la cámara: ' + err.message, 'error');
+                });
+                
                 showAlert('Cámara iniciada. Coloca el producto frente a la cámara', 'success');
                 
             } catch (error) {
+                console.error('Error al acceder a la cámara:', error);
                 showAlert('Error al acceder a la cámara: ' + error.message, 'error');
             }
         }
+        
+        // Función para iniciar detección YOLO en tiempo real
+        function startYOLODetection() {
+            const video = document.getElementById('captureVideo');
+            const canvas = document.getElementById('captureCanvas');
+            const ctx = canvas.getContext('2d');
+            const detectionStatus = document.getElementById('detectionStatus');
+            
+            // Verificar que el video esté listo
+            if (video.readyState < video.HAVE_METADATA) {
+                console.log('Esperando a que el video esté listo...');
+                setTimeout(startYOLODetection, 200);
+                return;
+            }
+            
+            // Limpiar intervalo anterior si existe
+            if (yoloDetectionInterval) {
+                clearInterval(yoloDetectionInterval);
+            }
+            if (window.videoDrawInterval) {
+                clearInterval(window.videoDrawInterval);
+            }
+            
+            // Cambiar a canvas para mostrar detección YOLO
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            
+            // Función para dibujar frame del video en el canvas
+            function drawVideoFrame() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    try {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    } catch (e) {
+                        console.error('Error dibujando video:', e);
+                    }
+                }
+            }
+            
+            // Dibujar video continuamente en el canvas (fallback)
+            window.videoDrawInterval = setInterval(() => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA && !yoloEnabled) {
+                    drawVideoFrame();
+                }
+            }, 33); // ~30 FPS
+            
+            // Detectar cada 500ms (2 FPS para no sobrecargar)
+            yoloDetectionInterval = setInterval(async () => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA && yoloEnabled) {
+                    try {
+                        // Primero dibujar el video actual en el canvas
+                        drawVideoFrame();
+                        
+                        // Capturar frame del video para enviar al servidor
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = video.videoWidth;
+                        tempCanvas.height = video.videoHeight;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.drawImage(video, 0, 0);
+                        
+                        // Convertir a base64
+                        const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
+                        
+                        // Enviar al servidor para detección (sin await para no bloquear)
+                        fetch('/detect_frame_yolo', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                image: imageData
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success' && data.image) {
+                                // Cargar imagen procesada con silueta
+                                const img = new Image();
+                                img.onload = () => {
+                                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                };
+                                img.onerror = () => {
+                                    // Si falla, mantener el video
+                                    drawVideoFrame();
+                                };
+                                img.src = data.image;
+                                
+                                // Actualizar estado de detección
+                                if (data.count > 0) {
+                                    detectionStatus.innerHTML = `<span class="badge bg-success">Objeto detectado</span>`;
+                                } else {
+                                    detectionStatus.innerHTML = `<span class="badge bg-warning">Buscando objeto...</span>`;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error en detección YOLO:', error);
+                            // Si falla, mantener el video dibujado
+                            drawVideoFrame();
+                        });
+                    } catch (error) {
+                        console.error('Error procesando frame:', error);
+                        drawVideoFrame();
+                    }
+                }
+            }, 500); // Cada 500ms
+        }
+        
+        // Toggle de detección YOLO
+        document.addEventListener('DOMContentLoaded', function() {
+            const yoloToggle = document.getElementById('enableYOLODetection');
+            if (yoloToggle) {
+                yoloToggle.addEventListener('change', function() {
+                    yoloEnabled = this.checked;
+                    const video = document.getElementById('captureVideo');
+                    const canvas = document.getElementById('captureCanvas');
+                    
+                    if (captureStream) {
+                        if (yoloEnabled) {
+                            // Activar YOLO
+                            startYOLODetection();
+                        } else {
+                            // Desactivar YOLO - mostrar video directamente
+                            if (yoloDetectionInterval) {
+                                clearInterval(yoloDetectionInterval);
+                                yoloDetectionInterval = null;
+                            }
+                            if (window.videoDrawInterval) {
+                                clearInterval(window.videoDrawInterval);
+                                window.videoDrawInterval = null;
+                            }
+                            
+                            // Mostrar video, ocultar canvas
+                            video.style.display = 'block';
+                            canvas.style.display = 'none';
+                        }
+                    }
+                });
+            }
+        });
         
         // Función para capturar imagen
         function captureImage() {
@@ -584,17 +843,23 @@
             
             const video = document.getElementById('captureVideo');
             const canvas = document.getElementById('captureCanvas');
-            const context = canvas.getContext('2d');
             
-            // Configurar canvas
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Crear un canvas temporal para capturar
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth || 640;
+            tempCanvas.height = video.videoHeight || 480;
+            const tempCtx = tempCanvas.getContext('2d');
             
-            // Dibujar frame actual
-            context.drawImage(video, 0, 0);
+            // Si YOLO está activado y el canvas está visible, usar el canvas
+            // Si no, usar el video directamente
+            if (yoloEnabled && canvas.style.display !== 'none') {
+                tempCtx.drawImage(canvas, 0, 0);
+            } else {
+                tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            }
             
             // Convertir a base64
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
             capturedImages.push(imageData);
             
             // Actualizar contador
@@ -648,16 +913,26 @@
                 showAlert('Error al procesar imágenes: ' + error.message, 'error');
             } finally {
                 // Limpiar interfaz
-                document.getElementById('captureInterface').style.display = 'none';
-                document.getElementById('captureForm').style.display = 'block';
+                cleanupCamera();
                 capturedImages = [];
                 currentProductName = '';
-                captureStream = null;
             }
         }
 
         // Función para cerrar la cámara automáticamente
         function cleanupCamera() {
+            // Detener detección YOLO
+            if (yoloDetectionInterval) {
+                clearInterval(yoloDetectionInterval);
+                yoloDetectionInterval = null;
+            }
+            
+            // Detener dibujo de video
+            if (window.videoDrawInterval) {
+                clearInterval(window.videoDrawInterval);
+                window.videoDrawInterval = null;
+            }
+            
             if (captureStream) {
                 captureStream.getTracks().forEach(track => track.stop());
                 captureStream = null;
@@ -676,6 +951,11 @@
             if (captureForm) {
                 captureForm.style.display = 'block';
             }
+            
+            // Limpiar canvas
+            const canvas = document.getElementById('captureCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         // Cerrar cámara al salir de la página
@@ -846,6 +1126,21 @@
             modal.show();
         }
 
+        // Cambiar configuración según tipo de entrenamiento
+        document.getElementById('trainingType').addEventListener('change', function() {
+            const trainingType = this.value;
+            const yoloConfig = document.getElementById('yoloConfig');
+            const tensorflowConfig = document.getElementById('tensorflowConfig');
+            
+            if (trainingType === 'yolo') {
+                yoloConfig.style.display = 'block';
+                tensorflowConfig.style.display = 'none';
+            } else {
+                yoloConfig.style.display = 'none';
+                tensorflowConfig.style.display = 'block';
+            }
+        });
+
         // Formulario de entrenamiento
         document.getElementById('trainingForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -855,8 +1150,7 @@
                 return;
             }
             
-            const epochs = parseInt(document.getElementById('epochs').value);
-            const batchSize = parseInt(document.getElementById('batchSize').value);
+            const trainingType = document.getElementById('trainingType').value;
             
             isTraining = true;
             const trainBtn = document.getElementById('trainBtn');
@@ -866,15 +1160,38 @@
             // Mostrar barra de progreso
             document.getElementById('progressContainer').style.display = 'block';
             
-            fetch('/start_training', {
+            let endpoint, requestBody;
+            
+            if (trainingType === 'yolo') {
+                // Entrenamiento YOLO
+                const epochs = parseInt(document.getElementById('epochs').value);
+                const batchSize = parseInt(document.getElementById('batchSize').value);
+                
+                endpoint = '/start_training';
+                requestBody = {
+                    epochs: epochs,
+                    batch_size: batchSize
+                };
+            } else {
+                // Entrenamiento TensorFlow
+                const epochs = parseInt(document.getElementById('tfEpochs').value);
+                const batchSize = parseInt(document.getElementById('tfBatchSize').value);
+                const modelType = document.getElementById('tfModelType').value;
+                
+                endpoint = '/start_tensorflow_training';
+                requestBody = {
+                    epochs: epochs,
+                    batch_size: batchSize,
+                    model_type: modelType
+                };
+            }
+            
+            fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    epochs: epochs,
-                    batch_size: batchSize
-                })
+                body: JSON.stringify(requestBody)
             })
             .then(response => response.json())
             .then(data => {
@@ -885,10 +1202,18 @@
                     simulateTrainingProgress();
                 } else {
                     showAlert(data.message, 'error');
+                    isTraining = false;
+                    trainBtn.disabled = false;
+                    trainBtn.innerHTML = '<i class="fas fa-play me-1"></i>Iniciar Entrenamiento';
+                    document.getElementById('progressContainer').style.display = 'none';
                 }
             })
             .catch(error => {
                 showAlert('Error al iniciar entrenamiento: ' + error.message, 'error');
+                isTraining = false;
+                trainBtn.disabled = false;
+                trainBtn.innerHTML = '<i class="fas fa-play me-1"></i>Iniciar Entrenamiento';
+                document.getElementById('progressContainer').style.display = 'none';
             });
         });
 

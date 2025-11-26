@@ -197,3 +197,61 @@ def get_weekly_sales_stats(start_date, end_date):
         'top_products': [{'name': p.name, 'quantity': p.total_sold} for p in top_products]
     }
 
+class TrainingProduct(db.Model):
+    """Modelo para productos de entrenamiento personalizados"""
+    __tablename__ = 'training_products'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relación con imágenes
+    images = db.relationship('TrainingImage', backref='product', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<TrainingProduct {self.name}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'image_count': len(self.images),
+            'created_at': self.created_at.isoformat(),
+            'last_updated': self.last_updated.isoformat()
+        }
+    
+    def get_image_count(self):
+        return len(self.images)
+
+class TrainingImage(db.Model):
+    """Modelo para almacenar imágenes de entrenamiento en la base de datos"""
+    __tablename__ = 'training_images'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('training_products.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    image_data = db.Column(db.LargeBinary, nullable=False)  # VARBINARY(MAX) en SQL Server
+    image_format = db.Column(db.String(10), default='JPEG')  # JPEG, PNG, etc.
+    file_size = db.Column(db.Integer)  # Tamaño en bytes
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<TrainingImage {self.filename} - Product: {self.product.name}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'product_id': self.product_id,
+            'product_name': self.product.name,
+            'filename': self.filename,
+            'image_format': self.image_format,
+            'file_size': self.file_size,
+            'created_at': self.created_at.isoformat()
+        }
+    
+    def get_image_base64(self):
+        """Convierte la imagen a base64 para enviar al frontend"""
+        import base64
+        return base64.b64encode(self.image_data).decode('utf-8')
+

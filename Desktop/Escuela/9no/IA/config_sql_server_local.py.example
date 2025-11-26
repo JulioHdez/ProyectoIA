@@ -1,0 +1,47 @@
+# Ejemplo de configuración para SQL Server local con Windows Authentication
+
+# Configuración de Base de Datos - SQL Server Local con Windows Auth
+SQLALCHEMY_DATABASE_URI = 'mssql+pyodbc://localhost/smart_cart?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes'
+
+# Método de almacenamiento de imágenes
+IMAGE_STORAGE_METHOD = 'database'  # 'database' o 'filesystem'
+
+# Otras configuraciones
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+# Configuración de archivos
+UPLOAD_FOLDER = 'uploads'
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
+
+# Configuración de detección
+DETECTION_THRESHOLD = 0.5
+YOLO_MODEL_PATH = 'yolov8n.pt'
+
+# Configuración de cámara
+DEFAULT_CAMERA_INDEX = 0
+
+# Configuración de reportes
+REPORTS_FOLDER = 'reports'
+DAILY_REPORT_TIME = '23:59'
+WEEKLY_REPORT_DAY = 'sunday'
+
+# Configuración de inventario
+DEFAULT_MIN_STOCK = 5
+LOW_STOCK_THRESHOLD = 5
+
+# Configuración de precios sugeridos
+DEFAULT_PRODUCT_PRICE = 10.00
+
+# Configuración de la interfaz
+ITEMS_PER_PAGE = 20
+AUTO_REFRESH_INTERVAL = 5000
+
+# Configuración de logging
+LOG_LEVEL = 'INFO'
+LOG_FILE = 'smart_cart.log'
+
+# Configuración de desarrollo
+DEBUG = True
+HOST = '0.0.0.0'
+PORT = 5000
+

@@ -1,0 +1,17 @@
+{
+  "model_type": "mobilenet",
+  "num_classes": 1,
+  "class_names": [
+    "Naranja"
+  ],
+  "img_size": [
+    224,
+    224
+  ],
+  "epochs": 50,
+  "batch_size": 3,
+  "test_accuracy": 1.0,
+  "test_top_k_accuracy": 1.0,
+  "timestamp": "20251125_205449",
+  "model_path": "tensorflow_models\\saved_models\\model_20251125_205449.h5"
+}

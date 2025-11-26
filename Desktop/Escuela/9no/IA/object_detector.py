@@ -6,6 +6,14 @@ from datetime import datetime
 import json
 from custom_trainer import CustomProductTrainer
 
+# Importar TensorFlow trainer (opcional)
+try:
+    from tensorflow_trainer import TensorFlowTrainer
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    print("TensorFlow no está disponible. Instala tensorflow para usar modelos de TensorFlow.")
+
 class ObjectDetector:
     """Clase para detección de objetos usando YOLO"""
     
@@ -33,6 +41,16 @@ class ObjectDetector:
         
         # Inicializar entrenador personalizado
         self.custom_trainer = CustomProductTrainer(model_path)
+        
+        # Inicializar TensorFlow trainer (opcional)
+        self.tensorflow_trainer = None
+        self.using_tensorflow = False
+        if TENSORFLOW_AVAILABLE:
+            try:
+                self.tensorflow_trainer = TensorFlowTrainer()
+                print("TensorFlow trainer inicializado")
+            except Exception as e:
+                print(f"Error inicializando TensorFlow trainer: {e}")
         
         # Usar modelo base YOLO por defecto (como al inicio del proyecto)
         # Esto detecta todos los objetos comunes (botellas, teléfonos, laptops, etc.)
@@ -499,6 +517,95 @@ class ObjectDetector:
     def delete_custom_product(self, product_name):
         """Elimina un producto personalizado"""
         return self.custom_trainer.delete_product(product_name)
+    
+    def load_tensorflow_model(self, model_path=None):
+        """
+        Carga un modelo de TensorFlow para clasificación
+        
+        Args:
+            model_path: Ruta al modelo. Si None, carga el más reciente.
+            
+        Returns:
+            bool: True si se cargó correctamente
+        """
+        if not TENSORFLOW_AVAILABLE or self.tensorflow_trainer is None:
+            print("TensorFlow no está disponible")
+            return False
+        
+        success = self.tensorflow_trainer.load_model(model_path)
+        if success:
+            self.using_tensorflow = True
+            print("Modelo TensorFlow cargado y activado")
+        return success
+    
+    def train_tensorflow_model(self, epochs=50, batch_size=32, model_type='mobilenet', product_dirs=None):
+        """
+        Entrena un modelo de clasificación con TensorFlow
+        
+        Args:
+            epochs: Número de épocas
+            batch_size: Tamaño del batch
+            model_type: Tipo de modelo ('mobilenet', 'efficientnet', 'resnet', 'custom')
+            product_dirs: Lista de productos a entrenar (None = todos)
+            
+        Returns:
+            dict: Resultados del entrenamiento
+        """
+        if not TENSORFLOW_AVAILABLE or self.tensorflow_trainer is None:
+            print("TensorFlow no está disponible")
+            return None
+        
+        self.tensorflow_trainer.model_type = model_type
+        return self.tensorflow_trainer.train(epochs=epochs, batch_size=batch_size, product_dirs=product_dirs)
+    
+    def detect_with_tensorflow(self, image):
+        """
+        Detecta productos usando el modelo de TensorFlow
+        
+        Args:
+            image: Imagen (numpy array o ruta)
+            
+        Returns:
+            list: Lista de detecciones con confianza
+        """
+        if not self.using_tensorflow or self.tensorflow_trainer is None:
+            print("Modelo TensorFlow no está cargado")
+            return []
+        
+        predictions = self.tensorflow_trainer.predict(image)
+        if predictions is None:
+            return []
+        
+        # Convertir a formato similar a YOLO
+        detections = []
+        for pred in predictions:
+            if pred['confidence'] > self.detection_threshold:
+                detection = {
+                    'class_name': pred['class_name'],
+                    'product_name': pred['class_name'],
+                    'confidence': pred['confidence'],
+                    'bbox': {
+                        'x1': 0,  # TensorFlow clasifica, no detecta bounding boxes
+                        'y1': 0,
+                        'x2': 0,
+                        'y2': 0
+                    },
+                    'timestamp': datetime.now().isoformat(),
+                    'method': 'tensorflow'
+                }
+                detections.append(detection)
+        
+        return detections
+    
+    def get_tensorflow_status(self):
+        """Obtiene el estado del entrenador de TensorFlow"""
+        if not TENSORFLOW_AVAILABLE or self.tensorflow_trainer is None:
+            return {'available': False}
+        
+        status = self.tensorflow_trainer.get_training_status()
+        status['available'] = True
+        status['using_tensorflow'] = self.using_tensorflow
+        return status
 
 class CameraHandler:
     """Manejador para la cámara web con optimizaciones"""
